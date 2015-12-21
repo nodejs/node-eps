@@ -1,8 +1,8 @@
-# Make C++ Stream APIs public
-
-Author: Fedor Indutny <fedor@indutny.com>
-Status: draft
-Date: Thu Dec 17 2015 19:39:46 GMT-0500 (EST)
+| Title  | Make C++ Stream APIs public |
+|--------|-----------------------------|
+| Author | @indutny                    |
+| Status | DRAFT                       |
+| Date   | 2015-12-17 19:39:46         |
 
 ## Description
 
