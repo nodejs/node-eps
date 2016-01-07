@@ -1,0 +1,169 @@
+# ES6 Modules
+
+Status | Draft
+------ | ----
+Author | Bradley Meck
+Date   | 7 Jan 2016
+
+It is our intent to:
+
+* implement interoperability for ES6 modules and node's existing module system
+* create a **Registry** compatible with the WhatWG Loader Registry
+
+## Purpose
+
+1. Allow a common module syntax for Browser and Server.
+2. Allow a common registry for inspection by Browser and Server environments/tools.
+    * these will most likely be represented by metaproperties like `import.ctx` but spec is not in place fully yet.
+
+## Related
+
+---
+
+### [ECMA262](https://tc39.github.io/ecma262/#sec-source-text-module-records)
+
+---
+
+Discusses the syntax and semantics of related syntax, and introduces:
+    
+#### Types
+    
+* [ModuleRecord](https://tc39.github.io/ecma262/#sec-abstract-module-records)
+    - Defines the list of imports via [ImportEntry](https://tc39.github.io/ecma262/#table-39).
+    - Defines the list of exports via [ExportEntry](https://tc39.github.io/ecma262/#table-41).
+    
+* [ModuleNamespace](https://tc39.github.io/ecma262/#sec-module-namespace-exotic-objects)
+    - Represents a read-only snapshot of a module's exports.
+    
+### Operations
+    
+* [ParseModule](https://tc39.github.io/ecma262/#sec-parsemodule)
+    - Creates a ModuleRecord from source code.
+    
+* [HostResolveImportedModule](https://tc39.github.io/ecma262/#sec-hostresolveimportedmodule)
+    - A hook for when an import is exactly performed.
+    
+* [CreateImportBinding](https://tc39.github.io/ecma262/#sec-createimportbinding)
+    - A means to create a shared binding (variable) from an export to an import. Required for the "live" binding of imports.
+
+---
+
+### [WhatWG Loader](https://github.com/whatwg/loader)
+
+---
+
+Discusses the design of module metadata in a [Registry](https://whatwg.github.io/loader/#registry). All actions regarding the Registry are synchronous.
+
+**NOTE** It is not Node's intent to implement the asynchronous pipeline in the Loader specification. There is discussion about including a synchronous pipeline in the specification as an addendum.
+
+
+### [Summary Video on Youtube](youtube.com/watch?v=NdOKO-6Ty7k)
+
+## Semantics
+
+### Determining if source is an ES6 Module
+
+If a module can be parsed outside of the ES6 Module goal, it will be treated as a [Script](https://tc39.github.io/ecma262/#sec-parse-script). Otherwise it will be parsed as [ES6](https://tc39.github.io/ecma262/#sec-parsemodule).
+
+In pseudocode, it looks somewhat like:
+
+```
+try {
+  v8::Script::Compile
+}
+catch (e) {
+  v8::Script::CompileModule
+}
+```
+
+V8 may or may not choose to use parser fallback to combine this into one step.
+
+### CommonJS consuming ES6
+
+#### default exports
+
+ES6 modules only ever declare named exports. A default export just exports a property named `default`.
+
+Given
+
+```javascript
+let foo = 'my-default';
+default export foo;
+```
+
+```javascript
+require('./es6');
+// {default:'my-default'}
+```
+
+#### read only
+
+The objects create by an ES6 module are [ModuleNamespace Objects](https://tc39.github.io/ecma262/#sec-module-namespace-exotic-objects).
+
+These have `[[Set]]` be a no-op and are read only views of the exports of an ES6 module.
+
+### ES6 consuming CommonJS
+
+#### default imports
+
+`module.exports` shadows `module.exports.default`.
+
+This means that if there is a `.default` on your CommonJS exports it will be shadowed to the `module.exports` of your module.
+
+Given:
+
+```javascript
+// cjs.js
+module.exports = {default:'my-default'};
+```
+
+You will grab `module.exports` when performing an ES6 import.
+
+```javascript
+// es6.js
+import foo from './cjs';
+// foo = {default:'my-default'};
+
+import {default as bar} from './cjs';
+// bar = {default:'my-default'};
+```
+
+### Known Gotchas
+
+All of these gotchas relate to opt-in semantics and the fact that CommonJS is a dynamic loader while ES6 is a static loader.
+
+No existing code will be affected.
+
+#### Circular Dep CJS => ES6 => CJS
+
+Given:
+
+```javascript
+//cjs.js
+module.exports = {x:0};
+require('./es6');
+```
+
+```javascript
+//es6.js
+import * as ns from './cjs';
+// ns = undefined
+import cjs from './cjs';
+// ns = undefined
+```
+
+The list of properties being exported is not populated until `cjs.js` finishes executing.
+
+The result is that there are no properties to import and you recieve an empty module.
+
+##### Option: Throw on this case
+
+Since this case is coming from ES6, we could throw whenever this occurs. This is similar to how you cannot change a generator while it is running.
+
+If taken this would change the ES6 module behavior to:
+
+```javascript
+//es6.js
+import * as ns from './cjs';
+// throw new EvalError('./cjs is not an ES6 module and has not finished evaluation');
+```
