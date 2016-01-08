@@ -167,3 +167,74 @@ If taken this would change the ES6 module behavior to:
 import * as ns from './cjs';
 // throw new EvalError('./cjs is not an ES6 module and has not finished evaluation');
 ```
+
+## Advisory
+
+V8 currently does not expose the proper APIs for creating Loaders, it has done the brunt of the work by [exposing a parser in their issue tracker](https://bugs.chromium.org/p/v8/issues/detail?id=1569).
+
+It has been recommended that we list a potential API we could consume in order to create our loader. These extensions are listed below.
+
+### Double Parsing Problem
+
+Due to the fact that we are going to be performing detection of grammar goal using parse failure or the presense of `import`/`export`. It would be ideal if `Compile` and `CompileModule` where merged into a single call. Assuming such we will place our additions in the `CompileOptions` and `Script` types. If such change is not possible, we will be using the fallback method listed in this proposal above.
+
+### API Suggestion
+
+```c++
+namespace v8
+
+CompileOptions {
+  // parse to Script or Module based upon invalid syntax
+  // default is Module
+  kDetectGoal
+  // tells the parser to change the detect goal default to Script
+  kDefaultGoalScript
+};
+
+class Module : Script {
+  // these are normally constructed via ScriptCompiler, however,
+  //
+  // in order for CommonJS modules to create fully formed
+  // ES6 Module compatibility we need to hook up a static
+  // View of an Object to set as our exports
+  //
+  // think of this as calling FillImports using the current
+  // properties of an object, enumerable or not.
+  //
+  // exports are never added or removed from the Module even
+  // though the exports object may do so, unlike `with()`
+  // 
+  // construction via this will act as if it has already been
+  // run() and fill out the Namespace()
+  Module(Object exports);
+  
+  // get a list of imports we need to perform prior to evaluation
+  ImportEntry[] ImportEntries();
+  
+  // get a list of what this exports
+  ExportEntry[] ExportEntries();
+  
+  // cannot be called prior to Run() completing
+  //
+  // return a ModuleNamespace view of this Module's exports
+  ModuleNamespace Namespace();
+  
+  // required prior to Run()
+  //
+  // this will add the bindings to the lexical environment of
+  // the Module
+  FillImports(ImportBinding[] bindings);
+}
+class ImportEntry {
+  String ModuleRequest();
+  
+  // note: if ImportName() is "*", the module takes the Namespace()
+  // as required by ECMA262
+  String ImportName();
+  
+  String LocalName();
+}
+class ImportBinding {
+  ImportBinding(String importName, Module delegate, String delegateExportName);
+}
+```
