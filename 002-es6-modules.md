@@ -8,7 +8,7 @@ Date   | 7 Jan 2016
 It is our intent to:
 
 * implement interoperability for ES6 modules and node's existing module system
-* create a **Registry** compatible with the WhatWG Loader Registry
+* create a **Registry Object** (see WhatWG section below) compatible with the WhatWG Loader Registry
 
 ## Purpose
 
@@ -38,7 +38,7 @@ Discusses the syntax and semantics of related syntax, and introduces:
 ### Operations
     
 * [ParseModule](https://tc39.github.io/ecma262/#sec-parsemodule)
-    - Creates a ModuleRecord from source code.
+    - Creates a SourceTextModuleRecord from source code.
     
 * [HostResolveImportedModule](https://tc39.github.io/ecma262/#sec-hostresolveimportedmodule)
     - A hook for when an import is exactly performed.
@@ -61,6 +61,10 @@ Discusses the design of module metadata in a [Registry](https://whatwg.github.io
 
 
 ### [Summary Video on Youtube](youtube.com/watch?v=NdOKO-6Ty7k)
+
+## Additional Structures Required
+
+### DynamicModuleRecord
 
 ## Semantics
 
@@ -194,9 +198,29 @@ CompileOptions {
   kDefaultGoalScript
 };
 
-class Module : Script {
-  // these are normally constructed via ScriptCompiler, however,
+class Module {
+  // return a ModuleNamespace view of this Module's exports
+  ModuleNamespace Namespace();
+}
+
+class SourceTextModule : Script, Module {
+  // get a list of imports we need to perform prior to evaluation
+  ImportEntry[] ImportEntries();
+  
+  // get a list of what this exports
+  ExportEntry[] ExportEntries();
+  
+  // cannot be called prior to Run() completing
+  ModuleNamespace Namespace();
+  
+  // required prior to Run()
   //
+  // this will add the bindings to the lexical environment of
+  // the Module
+  FillImports(ImportBinding[] bindings);
+}
+
+class DynamicModule : Module {
   // in order for CommonJS modules to create fully formed
   // ES6 Module compatibility we need to hook up a static
   // View of an Object to set as our exports
@@ -212,35 +236,20 @@ class Module : Script {
   // this in a way mimics:
   //   1. calling ModuleNamespaceCreate(this, exports)
   //   2. populating the [[Namespace]] field of this Module Record
-  Module(Object exports);
-  
-  // get a list of imports we need to perform prior to evaluation
-  ImportEntry[] ImportEntries();
-  
-  // get a list of what this exports
-  ExportEntry[] ExportEntries();
-  
-  // cannot be called prior to Run() completing
-  //
-  // return a ModuleNamespace view of this Module's exports
-  ModuleNamespace Namespace();
-  
-  // required prior to Run()
-  //
-  // this will add the bindings to the lexical environment of
-  // the Module
-  FillImports(ImportBinding[] bindings);
+  DynamicModule(Object exports);
 }
+
 class ImportEntry {
   String ModuleRequest();
   
-  // note: if ImportName() is "*", the module takes the Namespace()
+  // note: if ImportName() is "*", the Loader
+  // must take the Namespace() and not directly the module
   // as required by ECMA262
   String ImportName();
   
   String LocalName();
 }
 class ImportBinding {
-  ImportBinding(String importName, Module delegate, String delegateExportName);
+  ImportBinding(String importLocalName, Module delegate, String delegateExportName);
 }
 ```
