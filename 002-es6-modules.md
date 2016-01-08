@@ -14,7 +14,7 @@ It is our intent to:
 
 1. Allow a common module syntax for Browser and Server.
 2. Allow a common registry for inspection by Browser and Server environments/tools.
-    * these will most likely be represented by metaproperties like `import.ctx` but spec is not in place fully yet.
+    * these will most likely be represented by metaproperties like `import.context` but spec is not in place fully yet.
 
 ## Related
 
