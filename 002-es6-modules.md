@@ -46,6 +46,9 @@ Discusses the syntax and semantics of related syntax, and introduces:
 * [CreateImportBinding](https://tc39.github.io/ecma262/#sec-createimportbinding)
     - A means to create a shared binding (variable) from an export to an import. Required for the "live" binding of imports.
 
+* [ModuleNamespaceCreate](https://tc39.github.io/ecma262/#sec-modulenamespacecreate)
+    - Provides a means of creating a list of exports manually, used so that CommonJS `module.exports` can create ModuleRecords that are prepopulated.
+
 ---
 
 ### [WhatWG Loader](https://github.com/whatwg/loader)
@@ -206,6 +209,9 @@ class Module : Script {
   // 
   // construction via this will act as if it has already been
   // run() and fill out the Namespace()
+  // this in a way mimics:
+  //   1. calling ModuleNamespaceCreate(this, exports)
+  //   2. populating the [[Namespace]] field of this Module Record
   Module(Object exports);
   
   // get a list of imports we need to perform prior to evaluation
