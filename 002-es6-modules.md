@@ -236,7 +236,7 @@ class SourceTextModule : Script, Module {
   //
   // this will add the bindings to the lexical environment of
   // the Module
-  FillImports(ImportBinding[] bindings);
+  ImportDeclarationInstantiation(ImportBinding[] bindings);
 }
 
 class DynamicModule : Module {
@@ -244,7 +244,7 @@ class DynamicModule : Module {
   // ES6 Module compatibility we need to hook up a static
   // View of an Object to set as our exports
   //
-  // think of this as calling FillImports using the current
+  // think of this as calling ImportDeclarationInstantiation using the current
   // properties of an object, enumerable or not.
   //
   // exports are never added or removed from the Module even
