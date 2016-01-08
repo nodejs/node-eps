@@ -66,6 +66,25 @@ Discusses the design of module metadata in a [Registry](https://whatwg.github.io
 
 ### DynamicModuleRecord
 
+A Module Record that presents a view of an Object for its `[[Namespace]]` rather than coming from an environment record.
+
+The list of exports is frozen upon construction. No new properties may be added. No properties may be removed.
+
+## Algorithm
+
+When `require()`ing a file.
+
+1. Determine if file is ES6 or CommonJS (CJS).
+2. If CJS
+	1. Evaluate immediately
+	2. Produce a DynamicModuleRecord from `module.exports`
+3. If ES6
+	1. Parse for `import`/`export`s and keep record, in order to create bindings
+	2. Gather all submodules by performing `require` recursively
+		* See circular dep semantics below 
+	3. Connect `import` bindings for all relevant submodules (see [ModuleDeclarationInstantiation](https://tc39.github.io/ecma262/#sec-moduledeclarationinstantiation))
+	4. Evaluate
+
 ## Semantics
 
 ### Determining if source is an ES6 Module
