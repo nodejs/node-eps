@@ -114,7 +114,7 @@ Given
 
 ```javascript
 let foo = 'my-default';
-default export foo;
+export default foo;
 ```
 
 ```javascript
