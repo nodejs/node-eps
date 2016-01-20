@@ -8,7 +8,7 @@ Date   | 7 Jan 2016
 It is our intent to:
 
 * implement interoperability for ES6 modules and node's existing module system
-* create a **Registry Object** (see WhatWG section below) compatible with the WhatWG Loader Registry
+* create a **Registry Object** (see WHATWG section below) compatible with the WHATWG Loader Registry
 
 ## Purpose
 
@@ -51,7 +51,7 @@ Discusses the syntax and semantics of related syntax, and introduces:
 
 ---
 
-### [WhatWG Loader](https://github.com/whatwg/loader)
+### [WHATWG Loader](https://github.com/whatwg/loader)
 
 ---
 
