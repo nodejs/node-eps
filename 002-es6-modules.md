@@ -275,14 +275,14 @@ ES6ModuleRegistry.set(__filename, new ModuleStatus({
     // module_namespace, how an ES6 module would see a CJS module
     let module_namespace = Object.create(null);
     function gatherExports(obj, acc = new Set()) {
-    if (typeof obj !== 'object' && typeof obj !== 'function' || obj === null) {
-        return acc;
-    }
-    for (const key of Object.getOwnPropertyNames(obj)) {
-        const desc = Object.getOwnPropertyDescriptor(obj, key);
-        acc.add({key,desc});
-    }
-    return gatherExports(Object.getPrototypeOf(obj), acc);
+        if (typeof obj !== 'object' && typeof obj !== 'function' || obj === null) {
+            return acc;
+        }
+        for (const key of Object.getOwnPropertyNames(obj)) {
+            const desc = Object.getOwnPropertyDescriptor(obj, key);
+            acc.add({key,desc});
+        }
+        return gatherExports(Object.getPrototypeOf(obj), acc);
     }
     [...gatherExports(real_exports)].forEach(({key,desc}) => {
     if (key === 'default') return;
@@ -294,9 +294,9 @@ ES6ModuleRegistry.set(__filename, new ModuleStatus({
     });
     })
     Object.defineProperty(module_namespace, 'default', {
-    value: real_exports,
-    writable: false,
-    configurable: false
+        value: real_exports,
+        writable: false,
+        configurable: false
     });
     ES6ModuleRegistry.set(__filename, new ModuleStatus({
         'ready': {'[[Result]]': module_namespace}
