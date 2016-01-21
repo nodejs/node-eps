@@ -89,20 +89,7 @@ When `require()`ing a file.
 
 ### Determining if source is an ES6 Module
 
-If a module can be parsed outside of the ES6 Module goal, it will be treated as a [Script](https://tc39.github.io/ecma262/#sec-parse-script). Otherwise it will be parsed as [ES6](https://tc39.github.io/ecma262/#sec-parsemodule).
-
-In pseudocode, it looks somewhat like:
-
-```
-try {
-  v8::Script::Compile
-}
-catch (e) {
-  v8::Script::CompileModule
-}
-```
-
-V8 may or may not choose to use parser fallback to combine this into one step.
+A new filetype will be recognised, `.es` as ES6 based modules. They will be treated as a different loading semantic but compatible with existing systems, just like `.node`, `.json`, or usage of `require.extension` (even though deprecated) are compatible.
 
 ### CommonJS consuming ES6
 
@@ -200,22 +187,10 @@ V8 currently does not expose the proper APIs for creating Loaders, it has done t
 
 It has been recommended that we list a potential API we could consume in order to create our loader. These extensions are listed below.
 
-### Double Parsing Problem
-
-Due to the fact that we are going to be performing detection of grammar goal using parse failure or the presense of `import`/`export`. It would be ideal if `Compile` and `CompileModule` where merged into a single call. Assuming such we will place our additions in the `CompileOptions` and `Script` types. If such change is not possible, we will be using the fallback method listed in this proposal above.
-
 ### API Suggestion
 
 ```c++
-namespace v8
-
-CompileOptions {
-  // parse to Script or Module based upon invalid syntax
-  // default is Module
-  kDetectGoal
-  // tells the parser to change the detect goal default to Script
-  kDefaultGoalScript
-};
+namespace v8;
 
 class Module {
   // return a ModuleNamespace view of this Module's exports
