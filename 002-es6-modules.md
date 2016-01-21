@@ -285,13 +285,13 @@ ES6ModuleRegistry.set(__filename, new ModuleStatus({
         return gatherExports(Object.getPrototypeOf(obj), acc);
     }
     [...gatherExports(real_exports)].forEach(({key,desc}) => {
-    if (key === 'default') return;
-    Object.defineProperty(module_namespace, key, {
-        get: () => real_exports[key],
-        set() {throw new Error(`ModuleNamespace key ${key} is read only.`)},
-        configurable: false,
-        enumerable: Boolean(desc.enumerable)
-    });
+        if (key === 'default') return;
+        Object.defineProperty(module_namespace, key, {
+            get: () => real_exports[key],
+            set() {throw new Error(`ModuleNamespace key ${key} is read only.`)},
+            configurable: false,
+            enumerable: Boolean(desc.enumerable)
+        });
     })
     Object.defineProperty(module_namespace, 'default', {
         value: real_exports,
