@@ -189,7 +189,7 @@ It has been recommended that we list a potential API we could consume in order t
 
 ### API Suggestion
 
-```c++
+```cpp
 namespace v8;
 
 class Module {
@@ -246,4 +246,85 @@ class ImportEntry {
 class ImportBinding {
   ImportBinding(String importLocalName, Module delegate, String delegateExportName);
 }
+```
+
+## Example Implementation
+
+These are written with the expectation that:
+
+* ModuleNamespaces can be created from existing Objects.
+* WHATWG Loader spec Registry is available as ES6ModuleRegistry.
+* ModuleStatus Objects can be created.
+
+The variable names should be hidden from user code using various techniques left out here.
+
+### CJS Modules
+
+#### Pre Evaluation
+
+```javascript
+ES6ModuleRegistry.set(__filename, new ModuleStatus({
+    'ready': {'[[Result]]':undefined};
+}))
+```
+
+#### Trailer
+
+```javascript
+;{
+    // module_namespace, how an ES6 module would see a CJS module
+    let module_namespace = Object.create(null);
+    function gatherExports(obj, acc = new Set()) {
+    if (typeof obj !== 'object' && typeof obj !== 'function' || obj === null) {
+        return acc;
+    }
+    for (const key of Object.getOwnPropertyNames(obj)) {
+        const desc = Object.getOwnPropertyDescriptor(obj, key);
+        acc.add({key,desc});
+    }
+    return gatherExports(Object.getPrototypeOf(obj), acc);
+    }
+    [...gatherExports(real_exports)].forEach(({key,desc}) => {
+    if (key === 'default') return;
+    Object.defineProperty(module_namespace, key, {
+        get: () => real_exports[key],
+        set() {throw new Error(`ModuleNamespace key ${key} is read only.`)},
+        configurable: false,
+        enumerable: Boolean(desc.enumerable)
+    });
+    })
+    Object.defineProperty(module_namespace, 'default', {
+    value: real_exports,
+    writable: false,
+    configurable: false
+    });
+    ES6ModuleRegistry.set(__filename, new ModuleStatus({
+        'ready': {'[[Result]]': module_namespace}
+    });
+}
+```
+
+### ES6 Modules
+
+#### Post Parsing
+
+```
+require.cache[__filename] = new Module(...);
+require.cache[__filename].exports = undefined;
+```
+
+Parsing occurs prior to evaluation, and CJS may execute once we start to resolve `import`.
+
+#### Header
+
+```javascript
+// assert(module.exports == undefined);
+const exports = void 0;
+```
+
+# Immediately Post Evaluation
+
+```javascript
+const module_namespace = ES6ModuleRegistry.get(__filename).GetStage('ready')['[[result]]'];
+require.cache[__filename].exports = module_namespace;
 ```
