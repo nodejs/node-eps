@@ -89,7 +89,7 @@ When `require()`ing a file.
 
 ### Determining if source is an ES6 Module
 
-A new filetype will be recognised, `.es` as ES6 based modules. They will be treated as a different loading semantic but compatible with existing systems, just like `.node`, `.json`, or usage of `require.extension` (even though deprecated) are compatible.
+A new filetype will be recognised, `.jsm` as ES6 based modules. They will be treated as a different loading semantic but compatible with existing systems, just like `.node`, `.json`, or usage of `require.extension` (even though deprecated) are compatible.
 
 ### CommonJS consuming ES6
 
