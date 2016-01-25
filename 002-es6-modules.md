@@ -89,7 +89,7 @@ When `require()`ing a file.
 
 ### Determining if source is an ES6 Module
 
-A new filetype will be recognised, `.jsm` as ES6 based modules. They will be treated as a different loading semantic but compatible with existing systems, just like `.node`, `.json`, or usage of `require.extension` (even though deprecated) are compatible.
+A new filetype will be recognised, `.jsm` as ES6 based modules. They will be treated as a different loading semantic but compatible with existing systems, just like `.node`, `.json`, or usage of `require.extension` (even though deprecated) are compatible. It would be ideal if we could register the filetype with IANA as an offical file type, see [TC39 issue](https://github.com/tc39/ecma262/issues/322). Though it seems this would need to go through the [IESG](https://www.ietf.org/iesg/) and it seems browsers are non-plussed on introducing a new MIME.
 
 ### CommonJS consuming ES6
 
