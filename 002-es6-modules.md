@@ -319,7 +319,7 @@ fulfillNamespacePromise(module_namespace);
 
 #### Post Parsing
 
-```
+```javascript
 const module = ...;
 const namespacePromise = new Promise((f,r) => {
   fulfillNamespacePromise = f;
