@@ -13,9 +13,9 @@ adaptions to style and simplicity need to be done in order to conform with
 
 ## Motivation
 
-> `websockets` are the primary reason for companies, which have **not** decided
-to make a commitment towards `node` to use `node` anyways. For a wider adoption
-of the language this is a critical point.
+> `websockets` are a foot-in-the-door feature for companies, which have **not**
+decided to make a commitment towards `node` to use `node` anyways. For a wider
+adoption of the language this is a critical point.
 
 The above statement is the observation of the author.
 
