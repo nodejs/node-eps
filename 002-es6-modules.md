@@ -95,7 +95,7 @@ A new filetype will be recognised, `.jsm` as ES6 based modules. They will be tre
 
 #### default exports
 
-ES6 modules only ever declare named exports. A default export just exports a property named `default`.
+ES6 modules only ever declare named exports. A default export just exports a property named `default`. All ES6 modules are wrapped in a `Promise` in anticipation of top level `await`.
 
 Given
 
@@ -105,8 +105,9 @@ export default foo;
 ```
 
 ```javascript
-require('./es6');
-// {default:'my-default'}
+require('./es6').then((namespace) => {
+  console.log(namespace);// {default:'my-default'}
+})
 ```
 
 #### read only
@@ -263,12 +264,25 @@ The variable names should be hidden from user code using various techniques left
 #### Pre Evaluation
 
 ```javascript
+const namespacePromise = new Promise((f,r) => {
+  fulfillNamespacePromise = f;
+  rejectNamespacePromise = r;
+});
 ES6ModuleRegistry.set(__filename, new ModuleStatus({
-    'ready': {'[[Result]]':undefined};
-}))
+    'ready': {'[[Result]]':namespacePromise};
+}));
 ```
 
 #### Immediately Post Evaluation
+
+##### On Error
+
+```javascript
+rejectNamespacePromise(error);
+ES6ModuleRegistry.delete(__filename);
+```
+
+##### On Normal Completion
 
 ```javascript
 const real_exports = require.cache[__filename].exports;
@@ -298,9 +312,7 @@ Object.defineProperty(module_namespace, 'default', {
     writable: false,
     configurable: false
 });
-ES6ModuleRegistry.set(__filename, new ModuleStatus({
-    'ready': {'[[Result]]': module_namespace}
-});
+fulfillNamespacePromise(module_namespace);
 ```
 
 ### ES6 Modules
@@ -308,8 +320,19 @@ ES6ModuleRegistry.set(__filename, new ModuleStatus({
 #### Post Parsing
 
 ```
-require.cache[__filename] = new Module(...);
-require.cache[__filename].exports = undefined;
+const module = ...;
+const namespacePromise = new Promise((f,r) => {
+  fulfillNamespacePromise = f;
+  rejectNamespacePromise = r;
+});
+Object.freeze(namespacePromise);
+Object.defineProperty(module, 'exports', {
+  get() {return namespacePromise};
+  set(v) {throw new Error(`${__filename} is an ES6 module and cannot assign to module.exports`)}
+  configurable: false,
+  enumerable: false
+});
+require.cache[__filename] = namespacePromise;
 ```
 
 Parsing occurs prior to evaluation, and CJS may execute once we start to resolve `import`.
@@ -317,13 +340,21 @@ Parsing occurs prior to evaluation, and CJS may execute once we start to resolve
 #### Header
 
 ```javascript
-// assert(module.exports == undefined);
 const exports = void 0;
 ```
 
 #### Immediately Post Evaluation
 
+##### On Error
+
 ```javascript
-const module_namespace = ES6ModuleRegistry.get(__filename).GetStage('ready')['[[result]]'];
-require.cache[__filename].exports = module_namespace;
+rejectNamespacePromise(error);
+delete require.cache[__filename];
+```
+
+
+##### On Normal Completion
+
+```javascript
+fulfillNamespacePromise(ES6ModuleRegistry.get(__filename).GetStage('ready')['[[result]]']);
 ```
