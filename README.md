@@ -14,9 +14,9 @@ write a EP when requested by the Node core team.
 ## Rational
 
 The idea behind the EP process is to keep track of what ideas will be worked on
-and which ones where discarded, and why. This should help everyone (those
+and which ones were discarded, and why. This should help everyone (those
 closely involved with the project and newcomers) have a clear picture of where
-Node stands and where it want to be in the future.
+Node stands and where it wants to be in the future.
 
 ## Format
 
