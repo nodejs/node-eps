@@ -89,9 +89,53 @@ When `require()`ing a file.
 
 ### Determining if source is an ES6 Module
 
-~~A new filetype will be recognised, `.jsm` as ES6 based modules. They will be treated as a different loading semantic but compatible with existing systems, just like `.node`, `.json`, or usage of `require.extension` (even though deprecated) are compatible. It would be ideal if we could register the filetype with IANA as an offical file type, see [TC39 issue](https://github.com/tc39/ecma262/issues/322). Though it seems this would need to go through the [IESG](https://www.ietf.org/iesg/) and it seems browsers are non-plussed on introducing a new MIME.~~ Both TC39 and WHATWG reject the notion of a new MIME, we would have to push this through without any support from the standards bodies. As such I am for the moment disregarding but keeping reference to this idea.
+A new filetype will be recognised, `.jsm` as ES6 based modules. They will be treated as a different loading semantic but compatible with existing systems, just like `.node`, `.json`, or usage of `require.extension` (even though deprecated) are compatible. It would be ideal if we could register the filetype with IANA as an offical file type, see [TC39 issue](https://github.com/tc39/ecma262/issues/322). Though it seems this would need to go through the [IESG](https://www.ietf.org/iesg/) and it seems browsers are non-plussed on introducing a new MIME.
 
-We will be using a [Directive Prologue](https://tc39.github.io/ecma262/#directive-prologue) in order to detect if source code is ES6. The directive will be `"use module"`.
+The `.jsm` file extension will have a higher loading priority than `.js`.
+
+### ES6 Import Resolution
+
+ES6 `import` statements will not perform non-exact searches on relative or absolute paths, unlike `require()`. This means that no file extensions, or index files will be searched for when using relative or absolute paths. `node_modules` based paths will continue to use searching for both compatibility and to not limit the ability to have `package.json` support both ES6 and CJS entry points in a single codebase.
+
+In summary:
+
+```javascript
+// only looks at
+//   ./foo
+// does not search:
+//   ./foo.js
+//   ./foo/index.js
+//   ./foo/package.json
+//   etc.
+import './foo';
+```
+
+```javascript
+// only looks at
+//   /bar
+// does not search:
+//   /bar.js
+//   /bar/index.js
+//   /bar/package.json
+//   etc.
+import '/bar';
+```
+
+```javascript
+// continues to *search*:
+//   node_modules/baz.js
+//   node_modules/baz/package.json
+//   node_modules/baz/index.js
+import 'baz';
+```
+
+#### Vendored modules
+
+This will mean vendored modules are not included in the search path since `package.json` is not searched for outside of `node_modules`. Please use [bundledDependencies](https://docs.npmjs.com/files/package.json#bundleddependencies) to vendor your dependencies instead.
+
+#### Shipping both ES6 and CJS
+
+Since `node_modules` continues to use searching, when a `package.json` main is encountered we are still able to perform file extension searches. If we have 2 entry points `index.jsm` and `index.js` by setting `main:"./index"` we can let Node pick up either depending on what is supported, without us needing to manage multiple entry points separately.
 
 ### CommonJS consuming ES6
 
@@ -136,7 +180,7 @@ module.exports = {default:'my-default'};
 You will grab `module.exports` when performing an ES6 import.
 
 ```javascript
-// es6.js
+// es6.jsm
 import foo from './cjs';
 // foo = {default:'my-default'};
 
@@ -150,9 +194,9 @@ All of these gotchas relate to opt-in semantics and the fact that CommonJS is a 
 
 No existing code will be affected.
 
-#### Circular Dep CJS => ES6 => CJS
+#### Circular Dep CJS => ES6 => CJS Causes Throw
 
-Given:
+Due to the following explanation we want to avoid a very specific problem.  Given:
 
 ```javascript
 //cjs.js
@@ -161,25 +205,23 @@ require('./es6');
 ```
 
 ```javascript
-//es6.js
+//es6.jsm
 import * as ns from './cjs';
 // ns = undefined
 import cjs from './cjs';
 // ns = undefined
 ```
 
-The list of properties being exported is not populated until `cjs.js` finishes executing.
+The list of properties being exported is not populated until `cjs.js` finishes executing. The result is that there are no properties to import and you recieve an empty module.
 
-The result is that there are no properties to import and you recieve an empty module.
+In order to prevent this sticky situation we will throw on this case.
 
-##### Option: Throw on this case
+Since this case is coming from ES6, we will not break any existing circular dependencies in CJS <-> CJS. It may be easier to think of this change as similar to how you cannot affect a generator while it is running.
 
-Since this case is coming from ES6, we could throw whenever this occurs. This is similar to how you cannot change a generator while it is running.
-
-If taken this would change the ES6 module behavior to:
+This would change the ES6 module behavior to:
 
 ```javascript
-//es6.js
+//es6.jsm
 import * as ns from './cjs';
 // throw new EvalError('./cjs is not an ES6 module and has not finished evaluation');
 ```
