@@ -95,9 +95,11 @@ The `.jsm` file extension will have a higher loading priority than `.js`.
 
 ### ES6 Import Resolution
 
-ES6 `import` statements will not perform non-exact searches on relative or absolute paths, unlike `require()`. This means that no file extensions, or index files will be searched for when using relative or absolute paths. `node_modules` based paths will continue to use searching for both compatibility and to not limit the ability to have `package.json` support both ES6 and CJS entry points in a single codebase. `node_modules` based behavior will continue to be unchanged and look to parent `node_modules` directories recursively as well.
+ES6 `import` statements will not perform non-exact searches on relative or absolute paths, unlike `require()`. This means that no file extensions, or index files will be searched for when using relative or absolute paths. 
 
-In summary:
+`node_modules` based paths will continue to use searching for both compatibility and to not limit the ability to have `package.json` support both ES6 and CJS entry points in a single codebase. `node_modules` based behavior will continue to be unchanged and look to parent `node_modules` directories recursively as well.
+
+In summary so far:
 
 ```javascript
 // only looks at
@@ -133,6 +135,44 @@ import '/bar';
 //   etc.
 import 'baz';
 ```
+
+#### Removal of non-local dependencies
+
+All of the following:
+
+* `$NODE_PATH`
+* `$HOME/.node_modules`
+* `$HOME/.node_libraries`
+* `$PREFIX/lib/node`
+
+will not be supported by the `import` statement. Use local dependencies, and symbolic links as needed.
+
+##### How to support non-local dependencies
+
+Although not recommended, and in fact discouraged, there is a way to support non-local dependencies. **USE THIS AT YOUR OWN DISCRETION*. 
+
+Symlinks of `node_modules -> $HOME/.node_modules`, `node_modules/foo/ -> $HOME/.node_modules/foo/`, etc. will continue to be supported.
+
+Adding a parent directory with `node_modules` symlinked will be an effective strategy for recreating these functionalities. This will incur the known problems with non-local dependencies, but now leaves the problems in the hands of the user, allowing node to give more clear insight to your modules by reducing complexity.
+
+Given:
+
+```sh
+/opt/local/myapp
+```
+
+Transform to:
+
+```sh
+/opt/local/non-local-deps/myapp
+/opt/local/non-local-deps/node_modules -> $PREFIX/lib/node (etc.)
+```
+
+And nest as many times as needed.
+
+#### Errors
+
+In the case that an `import` statement is unable to find a module, node should make a **best effort** to see if `require` would have found the module and print out where it was found, if `NODE_PATH` was used, if `HOME` was used, etc.
 
 #### Vendored modules
 
