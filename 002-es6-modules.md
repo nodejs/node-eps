@@ -95,7 +95,7 @@ The `.jsm` file extension will have a higher loading priority than `.js`.
 
 ### ES6 Import Resolution
 
-ES6 `import` statements will not perform non-exact searches on relative or absolute paths, unlike `require()`. This means that no file extensions, or index files will be searched for when using relative or absolute paths. `node_modules` based paths will continue to use searching for both compatibility and to not limit the ability to have `package.json` support both ES6 and CJS entry points in a single codebase. `node_modules` based behavior will continue to be unchanged and look to parent `node_modules` directories as well.
+ES6 `import` statements will not perform non-exact searches on relative or absolute paths, unlike `require()`. This means that no file extensions, or index files will be searched for when using relative or absolute paths. `node_modules` based paths will continue to use searching for both compatibility and to not limit the ability to have `package.json` support both ES6 and CJS entry points in a single codebase. `node_modules` based behavior will continue to be unchanged and look to parent `node_modules` directories recursively as well.
 
 In summary:
 
