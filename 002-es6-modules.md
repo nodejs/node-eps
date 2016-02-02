@@ -149,7 +149,7 @@ will not be supported by the `import` statement. Use local dependencies, and sym
 
 ##### How to support non-local dependencies
 
-Although not recommended, and in fact discouraged, there is a way to support non-local dependencies. **USE THIS AT YOUR OWN DISCRETION*. 
+Although not recommended, and in fact discouraged, there is a way to support non-local dependencies. **USE THIS AT YOUR OWN DISCRETION**. 
 
 Symlinks of `node_modules -> $HOME/.node_modules`, `node_modules/foo/ -> $HOME/.node_modules/foo/`, etc. will continue to be supported.
 
