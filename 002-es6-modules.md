@@ -186,7 +186,7 @@ Since `node_modules` continues to use searching, when a `package.json` main is e
 
 #### default exports
 
-ES6 modules only ever declare named exports. A default export just exports a property named `default`. All ES6 modules are wrapped in a `Promise` in anticipation of top level `await`.
+ES6 modules only ever declare named exports. A default export just exports a property named `default`. `require` will not automatically wrap ES6 modules in a `Promise`. In the future if top level `await` becomes spec, you can use the `System.loader.import` function to wrap modules and wait on them (top level await can cause deadlock with circular dependencies, node should discourage its use).
 
 Given
 
@@ -196,9 +196,7 @@ export default foo;
 ```
 
 ```javascript
-require('./es6').then((namespace) => {
-  console.log(namespace);// {default:'my-default'}
-})
+const foo = require('./es6').foo;
 ```
 
 #### read only
@@ -294,7 +292,7 @@ class SourceTextModule : Script, Module {
   // get a list of what this exports
   ExportEntry[] ExportEntries();
   
-  // cannot be called prior to Run() completing
+  // can be called prior to Run(), but all entries will have values of undefined
   ModuleNamespace Namespace();
   
   // required prior to Run()
@@ -320,6 +318,8 @@ class DynamicModule : Module {
   // this in a way mimics:
   //   1. calling ModuleNamespaceCreate(this, exports)
   //   2. populating the [[Namespace]] field of this Module Record
+  // 
+  // see JS implementation below for approximate behavior
   DynamicModule(Object exports);
 }
 
@@ -338,6 +338,33 @@ class ImportBinding {
 }
 ```
 
+```javascript
+// JS implementation of DynamicModule
+function DynamicModule(obj) {
+  let module_namespace = Object.create(null);
+  function gatherExports(obj, acc = new Set()) {
+      if (typeof obj !== 'object' && typeof obj !== 'function' || obj === null) {
+          return acc;
+      }
+      for (const key of Object.getOwnPropertyNames(obj)) {
+          const desc = Object.getOwnPropertyDescriptor(obj, key);
+          acc.add({key,desc});
+      }
+      return gatherExports(Object.getPrototypeOf(obj), acc);
+  }
+  [...gatherExports(obj)].forEach(({key,desc}) => {
+      if (key === 'default') return;
+      Object.defineProperty(module_namespace, key, {
+          get: () => obj[key],
+          set() {throw new Error(`ModuleNamespace key ${key} is read only.`)},
+          configurable: false,
+          enumerable: Boolean(desc.enumerable)
+      });
+  });
+  return module_namespace;
+}
+```
+
 ## Example Implementation
 
 These are written with the expectation that:
@@ -353,12 +380,9 @@ The variable names should be hidden from user code using various techniques left
 #### Pre Evaluation
 
 ```javascript
-const namespacePromise = new Promise((f,r) => {
-  fulfillNamespacePromise = f;
-  rejectNamespacePromise = r;
-});
+// for posterity, will still throw on circular deps
 ES6ModuleRegistry.set(__filename, new ModuleStatus({
-    'ready': {'[[Result]]':namespacePromise};
+    'ready': {'[[Result]]':undefined};
 }));
 ```
 
@@ -367,41 +391,21 @@ ES6ModuleRegistry.set(__filename, new ModuleStatus({
 ##### On Error
 
 ```javascript
-rejectNamespacePromise(error);
 ES6ModuleRegistry.delete(__filename);
 ```
 
 ##### On Normal Completion
 
 ```javascript
-const real_exports = require.cache[__filename].exports;
-// module_namespace, how an ES6 module would see a CJS module
-let module_namespace = Object.create(null);
-function gatherExports(obj, acc = new Set()) {
-    if (typeof obj !== 'object' && typeof obj !== 'function' || obj === null) {
-        return acc;
-    }
-    for (const key of Object.getOwnPropertyNames(obj)) {
-        const desc = Object.getOwnPropertyDescriptor(obj, key);
-        acc.add({key,desc});
-    }
-    return gatherExports(Object.getPrototypeOf(obj), acc);
-}
-[...gatherExports(real_exports)].forEach(({key,desc}) => {
-    if (key === 'default') return;
-    Object.defineProperty(module_namespace, key, {
-        get: () => real_exports[key],
-        set() {throw new Error(`ModuleNamespace key ${key} is read only.`)},
-        configurable: false,
-        enumerable: Boolean(desc.enumerable)
-    });
-})
+let module_namespace = Object.create(module.exports);
 Object.defineProperty(module_namespace, 'default', {
-    value: real_exports,
+    value: module.exports,
     writable: false,
     configurable: false
 });
-fulfillNamespacePromise(module_namespace);
+ES6ModuleRegistry.set(__filename, new ModuleStatus({
+    'ready': {'[[Result]]':v8.module.DynamicModule(module_namespace)};
+}));
 ```
 
 ### ES6 Modules
@@ -409,19 +413,12 @@ fulfillNamespacePromise(module_namespace);
 #### Post Parsing
 
 ```javascript
-const module = ...;
-const namespacePromise = new Promise((f,r) => {
-  fulfillNamespacePromise = f;
-  rejectNamespacePromise = r;
-});
-Object.freeze(namespacePromise);
 Object.defineProperty(module, 'exports', {
-  get() {return namespacePromise};
+  get() {return v8.Module.Namespace(module)};
   set(v) {throw new Error(`${__filename} is an ES6 module and cannot assign to module.exports`)}
   configurable: false,
   enumerable: false
 });
-require.cache[__filename] = namespacePromise;
 ```
 
 Parsing occurs prior to evaluation, and CJS may execute once we start to resolve `import`.
@@ -429,7 +426,10 @@ Parsing occurs prior to evaluation, and CJS may execute once we start to resolve
 #### Header
 
 ```javascript
-const exports = void 0;
+// we will intercept this to inject the values
+import {__filename,__dirname,require,module,exports} from 'CURRENT__FILENAME';
+// to prevent global problems, and false sense of writable exports object:
+// exports = undefined
 ```
 
 #### Immediately Post Evaluation
@@ -437,13 +437,5 @@ const exports = void 0;
 ##### On Error
 
 ```javascript
-rejectNamespacePromise(error);
 delete require.cache[__filename];
-```
-
-
-##### On Normal Completion
-
-```javascript
-fulfillNamespacePromise(ES6ModuleRegistry.get(__filename).GetStage('ready')['[[result]]']);
 ```
