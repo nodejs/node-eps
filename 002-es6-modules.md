@@ -33,7 +33,7 @@ Discusses the syntax and semantics of related syntax, and introduces:
     - Defines the list of exports via [ExportEntry](https://tc39.github.io/ecma262/#table-41).
     
 * [ModuleNamespace](https://tc39.github.io/ecma262/#sec-module-namespace-exotic-objects)
-    - Represents a read-only snapshot of a module's exports.
+    - Represents a read-only static set of live bindings of a module's exports.
     
 ### Operations
     
