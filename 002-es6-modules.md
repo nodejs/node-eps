@@ -196,7 +196,7 @@ export default foo;
 ```
 
 ```javascript
-const foo = require('./es6').foo;
+const foo = require('./es6').default;
 ```
 
 #### read only
