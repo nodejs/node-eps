@@ -299,7 +299,7 @@ class SourceTextModule : Script, Module {
   //
   // this will add the bindings to the lexical environment of
   // the Module
-  ImportDeclarationInstantiation(ImportBinding[] bindings);
+  ModuleDeclarationInstantiation(ImportBinding[] bindings);
 }
 
 class DynamicModule : Module {
