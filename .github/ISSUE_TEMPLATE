@@ -1,0 +1,8 @@
+Thanks for getting involved in Node's EP process. Please note that all opened
+issues are for the explicit purpose of allowing existing PR's to break
+conversation into subtopics. In the case that the PR's conversation becomes too
+long or complex to maintain in a single thread.
+
+All issues opened not following the above guideline will be immediately closed.
+Issues opened for a given PR should be referenced from that PR, and the PR
+referenced in the opened issue.
