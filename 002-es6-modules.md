@@ -197,6 +197,8 @@ Since `main` in `package.json` is entirely optional even inside of npm packages,
 
 `module.exports` is a single value. As such it does not have the dictionary like properties of ES module exports. In order to facilitate named imports for ES modules, all properties of `module.exports` will be hoisted to named exports after evaluation of CJS modules with the exception of `default` which will point to `module.exports` directly.
 
+##### Examples
+
 Given:
 
 ```javascript
@@ -216,6 +218,71 @@ import foo from './cjs';
 
 import {default as bar} from './cjs';
 // bar = {default:'my-default', thing:'stuff'};
+```
+
+------
+
+Given:
+
+```javascript
+// cjs.js
+module.exports = null;
+```
+
+You will grab `module.exports` when performing an ES import.
+
+```javascript
+// es.jsm
+import foo from './cjs';
+// foo = null;
+
+import * as bar from './cjs';
+// bar = {default:null};
+```
+
+------
+
+Given:
+
+```javascript
+// cjs.js
+module.exports = function two() {
+  return 2;
+};
+```
+
+You will grab `module.exports` when performing an ES import.
+
+```javascript
+// es.jsm
+import foo from './cjs';
+foo(); // 2
+
+import * as bar from './cjs';
+bar.name; // 'two'
+bar.default(); // 2
+bar(); // throws, bar is not a function
+```
+
+------
+
+Given:
+
+```javascript
+// cjs.js
+module.exports = Promise.resolve(3);
+```
+
+You will grab `module.exports` when performing an ES import.
+
+```javascript
+// es.jsm
+import foo from './cjs';
+foo.then(console.log); // outputs 3
+
+import * as bar from './cjs';
+bar.default.then(console.log); // outputs 3
+bar.then(console.log); // throws, bar is not a Promise
 ```
 
 ### CommonJS consuming ES
@@ -261,15 +328,15 @@ Unlike ES modules, CJS modules have allowed mutation. When ES modules are integr
 Remember that `module.exports` from CJS is directly available under `default` for `import`. This means that if you use:
 
 ```javascript
-import * as shallow from 'grunt';
+import * as namespace from 'grunt';
 ```
 
-According to ES `*` creates a shallow copy and all properties will be read-only.
+According to ES `*` grabs the namespace directly whose properties will be read-only.
 
 However, doing:
 
 ```javascript
-import grunt from 'grunt';
+import grunt_default from 'grunt';
 ```
 
 Grabs the `default` which is exactly what `module.exports` is, and all the properties will be mutable.
