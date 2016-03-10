@@ -59,9 +59,6 @@ Discusses the design of module metadata in a [Registry](https://whatwg.github.io
 
 **NOTE** It is not Node's intent to implement the asynchronous pipeline in the Loader specification. There is discussion about including a synchronous pipeline in the specification as an addendum.
 
-
-### [Summary Video on Youtube](youtube.com/watch?v=NdOKO-6Ty7k)
-
 ## Additional Structures Required
 
 ### DynamicModuleRecord
@@ -251,18 +248,6 @@ All of these gotchas relate to opt-in semantics and the fact that CommonJS is a 
 
 No existing code will be affected.
 
-#### No reassigning `module.exports` after evaluation
-
-Since we need a consistent time to snapshot the `module.exports` of a CJS module. We will execute it immediately after evaluation. Code such as:
-
-```javascript
-// bad-cjs.js
-module.exports = 123;
-setTimeout(_ => module.exports = null);
-```
-
-Will not see `module.exports` change to `null`. All ES module `import`s of the module will always see `123`.
-
 #### ES exports are read only
 
 The objects create by an ES module are [ModuleNamespace Objects](https://tc39.github.io/ecma262/#sec-module-namespace-exotic-objects).
@@ -288,6 +273,46 @@ import grunt from 'grunt';
 ```
 
 Grabs the `default` which is exactly what `module.exports` is, and all the properties will be mutable.
+
+#### ES will not honor reassigning `module.exports` after evaluation
+
+Since we need a consistent time to snapshot the `module.exports` of a CJS module. We will execute it immediately after evaluation. Code such as:
+
+```javascript
+// bad-cjs.js
+module.exports = 123;
+setTimeout(_ => module.exports = null);
+```
+
+Will not see `module.exports` change to `null`. All ES module `import`s of the module will always see `123`.
+
+#### ES export list for CJS are snapshot immediately after execution.
+
+Since `module.exports` is snapshot immediately after execution, that is the point when hoisting of properties occurs, adding and removing properties later will not have an effect on the list of exports.
+
+```javascript
+// bad-cjs.js
+module.exports = {
+  yo: 'lo'
+};
+setTimeout(_ => {
+  delete module.exports.yo;
+  module.exports.foo = 'bar';
+  require('./es.js');
+});
+```
+
+```javascript
+// es.js
+import * as namespace from './bad-cjs.js';
+console.log(Object.keys(namespace)); // ['yo']
+console.log(namespace.foo); // undefined
+
+// mutate to show 'yo' still exists as a binding
+import cjs_exports from './bad-cjs.js';
+cjs_exports.yo = 'lo again';
+console.log(namespace.yo); // 'yolo again'
+```
 
 #### Circular Dep CJS => ES => CJS Causes Throw
 
