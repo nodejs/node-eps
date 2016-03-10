@@ -1,4 +1,4 @@
-# ES6 Modules
+# ES Modules
 
 Status | Draft
 ------ | ----
@@ -7,7 +7,7 @@ Date   | 7 Jan 2016
 
 It is our intent to:
 
-* implement interoperability for ES6 modules and node's existing module system
+* implement interoperability for ES modules and node's existing module system
 * create a **Registry Object** (see WHATWG section below) compatible with the WHATWG Loader Registry
 
 ## Purpose
@@ -68,36 +68,44 @@ Discusses the design of module metadata in a [Registry](https://whatwg.github.io
 
 A Module Record that presents a view of an Object for its `[[Namespace]]` rather than coming from an environment record.
 
-The list of exports is frozen upon construction. No new properties may be added. No properties may be removed.
+All exported values are declarative. That means that they are known after the file is parsed, but before it is evaluated.
+
+When creating a `DynamicModuleRecord`. The list of exports is frozen upon construction. No new exports may be added. No exports may be removed.
 
 ## Algorithm
 
-When `require()`ing a file.
+When loading a file.
 
-1. Determine if file is ES6 or CommonJS (CJS).
+1. Determine if file is ES or CommonJS (CJS).
 2. If CJS
 	1. Evaluate immediately
 	2. Produce a DynamicModuleRecord from `module.exports`
-3. If ES6
+3. If ES
 	1. Parse for `import`/`export`s and keep record, in order to create bindings
-	2. Gather all submodules by performing `require` recursively
+	2. Gather all submodules by performing loading dependencies recursively
 		* See circular dep semantics below 
 	3. Connect `import` bindings for all relevant submodules (see [ModuleDeclarationInstantiation](https://tc39.github.io/ecma262/#sec-moduledeclarationinstantiation))
 	4. Evaluate
+  
+This still guarantees:
+
+* that ES module dependencies are all executed prior to the module itself
+* CJS modules have a full shape prior to being handed to ES modules
+* allows CJS modules to imperatively start the loading of other modules, including ES modules
 
 ## Semantics
 
-### Determining if source is an ES6 Module
+### Determining if source is an ES Module
 
-A new filetype will be recognised, `.jsm` as ES6 based modules. They will be treated as a different loading semantic but compatible with existing systems, just like `.node`, `.json`, or usage of `require.extension` (even though deprecated) are compatible. It would be ideal if we could register the filetype with IANA as an offical file type, see [TC39 issue](https://github.com/tc39/ecma262/issues/322). Though it seems this would need to go through the [IESG](https://www.ietf.org/iesg/) and it seems browsers are non-plussed on introducing a new MIME.
+A new filetype will be recognised, `.jsm` as ES modules. They will be treated as a different loading semantic but compatible with existing systems, just like `.node`, `.json`, or usage of `require.extension` (even though deprecated) are compatible. It would be ideal if we could register the filetype with IANA as an offical file type, see [TC39 issue](https://github.com/tc39/ecma262/issues/322). Though it seems this would need to go through the [IESG](https://www.ietf.org/iesg/) and it seems browsers are non-plussed on introducing a new MIME.
 
 The `.jsm` file extension will have a higher loading priority than `.js`.
 
-### ES6 Import Resolution
+### ES Import Path Resolution
 
-ES6 `import` statements will not perform non-exact searches on relative or absolute paths, unlike `require()`. This means that no file extensions, or index files will be searched for when using relative or absolute paths. 
+ES `import` statements will not perform non-exact searches on relative or absolute paths, unlike `require()`. This means that no file extensions, or index files will be searched for when using relative or absolute paths. 
 
-`node_modules` based paths will continue to use searching for both compatibility and to not limit the ability to have `package.json` support both ES6 and CJS entry points in a single codebase. `node_modules` based behavior will continue to be unchanged and look to parent `node_modules` directories recursively as well.
+`node_modules` based paths will continue to use searching for both compatibility and to not limit the ability to have `package.json` support both ES and CJS entry points in a single codebase. `node_modules` based behavior will continue to be unchanged and look to parent `node_modules` directories recursively as well.
 
 In summary so far:
 
@@ -178,95 +186,139 @@ In the case that an `import` statement is unable to find a module, node should m
 
 This will mean vendored modules are not included in the search path since `package.json` is not searched for outside of `node_modules`. Please use [bundledDependencies](https://docs.npmjs.com/files/package.json#bundleddependencies) to vendor your dependencies instead.
 
-#### Shipping both ES6 and CJS
+#### Shipping both ES and CJS
 
 Since `node_modules` continues to use searching, when a `package.json` main is encountered we are still able to perform file extension searches. If we have 2 entry points `index.jsm` and `index.js` by setting `main:"./index"` we can let Node pick up either depending on what is supported, without us needing to manage multiple entry points separately.
 
-### CommonJS consuming ES6
+##### Excluding main
 
-#### default exports
+Since `main` in `package.json` is entirely optional even inside of npm packages, some people may prefer to exclude main entirely in the case of using `./index` as that is still in the node module search algorithm.
 
-ES6 modules only ever declare named exports. A default export just exports a property named `default`. `require` will not automatically wrap ES6 modules in a `Promise`. In the future if top level `await` becomes spec, you can use the `System.loader.import` function to wrap modules and wait on them (top level await can cause deadlock with circular dependencies, node should discourage its use).
-
-Given
-
-```javascript
-let foo = 'my-default';
-export default foo;
-```
-
-```javascript
-const foo = require('./es6').default;
-```
-
-#### read only
-
-The objects create by an ES6 module are [ModuleNamespace Objects](https://tc39.github.io/ecma262/#sec-module-namespace-exotic-objects).
-
-These have `[[Set]]` be a no-op and are read only views of the exports of an ES6 module.
-
-### ES6 consuming CommonJS
+### ES consuming CommonJS
 
 #### default imports
 
-`module.exports` shadows `module.exports.default`.
-
-This means that if there is a `.default` on your CommonJS exports it will be shadowed to the `module.exports` of your module.
+`module.exports` is a single value. As such it does not have the dictionary like properties of ES module exports. In order to facilitate named imports for ES modules, all properties of `module.exports` will be hoisted to named exports after evaluation of CJS modules with the exception of `default` which will point to `module.exports` directly.
 
 Given:
 
 ```javascript
 // cjs.js
-module.exports = {default:'my-default'};
+module.exports = {
+  default:'my-default',
+  thing:'stuff'
+};
 ```
 
-You will grab `module.exports` when performing an ES6 import.
+You will grab `module.exports` when performing an ES import.
 
 ```javascript
-// es6.jsm
+// es.jsm
 import foo from './cjs';
-// foo = {default:'my-default'};
+// foo = {default:'my-default', thing:'stuff'};
 
 import {default as bar} from './cjs';
-// bar = {default:'my-default'};
+// bar = {default:'my-default', thing:'stuff'};
+```
+
+### CommonJS consuming ES
+
+#### default exports
+
+ES modules only ever declare named exports. A default export just exports a property named `default`. `require` will not automatically wrap ES modules in a `Promise`. In the future if top level `await` becomes spec, you can use the `System.loader.import` function to wrap modules and wait on them (top level await can cause deadlock with circular dependencies, node should discourage its use).
+
+Given
+
+```javascript
+// es.jsm
+let foo = {bar:'my-default'};
+export default foo;
+```
+
+```javascript
+// cjs.js
+const es_namespace = require('./es');
+// es_namespace = {
+//   default: { 
+//     bar:'my-default'
+//   }
+// }
 ```
 
 ### Known Gotchas
 
-All of these gotchas relate to opt-in semantics and the fact that CommonJS is a dynamic loader while ES6 is a static loader.
+All of these gotchas relate to opt-in semantics and the fact that CommonJS is a dynamic loader while ES is a static loader.
 
 No existing code will be affected.
 
-#### Circular Dep CJS => ES6 => CJS Causes Throw
+#### No reassigning `module.exports` after evaluation
+
+Since we need a consistent time to snapshot the `module.exports` of a CJS module. We will execute it immediately after evaluation. Code such as:
+
+```javascript
+// bad-cjs.js
+module.exports = 123;
+setTimeout(_ => module.exports = null);
+```
+
+Will not see `module.exports` change to `null`. All ES module `import`s of the module will always see `123`.
+
+#### ES exports are read only
+
+The objects create by an ES module are [ModuleNamespace Objects](https://tc39.github.io/ecma262/#sec-module-namespace-exotic-objects).
+
+These have `[[Set]]` be a no-op and are read only views of the exports of an ES module. Attempting to reassign any named export will not work, but assigning to the properties of the exports follows normal rules.
+
+### CJS exports allow mutation
+
+Unlike ES modules, CJS modules have allowed mutation. When ES modules are integrating against CJS systems like Grunt, it may be necessary to mutate a `module.exports`.
+
+Remember that `module.exports` from CJS is directly available under `default` for `import`. This means that if you use:
+
+```javascript
+import * as shallow from 'grunt';
+```
+
+According to ES `*` creates a shallow copy and all properties will be read-only.
+
+However, doing:
+
+```javascript
+import grunt from 'grunt';
+```
+
+Grabs the `default` which is exactly what `module.exports` is, and all the properties will be mutable.
+
+#### Circular Dep CJS => ES => CJS Causes Throw
 
 Due to the following explanation we want to avoid a very specific problem.  Given:
 
 ```javascript
-//cjs.js
+// cjs.js
 module.exports = {x:0};
-require('./es6');
+require('./es');
 ```
 
 ```javascript
-//es6.jsm
+// es.jsm
 import * as ns from './cjs';
-// ns = undefined
+// ns = ?
 import cjs from './cjs';
-// ns = undefined
+// cjs = ?
 ```
 
-The list of properties being exported is not populated until `cjs.js` finishes executing. The result is that there are no properties to import and you recieve an empty module.
+ES modules must know the list of exported bindings of all dependencies prior to evaluating. The value being exported for CJS modules is not stable to snapshot until `cjs.js` finishes executing. The result is that there are no properties to import and you recieve an empty module.
 
 In order to prevent this sticky situation we will throw on this case.
 
-Since this case is coming from ES6, we will not break any existing circular dependencies in CJS <-> CJS. It may be easier to think of this change as similar to how you cannot affect a generator while it is running.
+Since this case is coming from ES, we will not break any existing circular dependencies in CJS <-> CJS. It may be easier to think of this change as similar to how you cannot affect a generator while it is running.
 
-This would change the ES6 module behavior to:
+This would change the ES module behavior to:
 
 ```javascript
-//es6.jsm
+// es.jsm
 import * as ns from './cjs';
-// throw new EvalError('./cjs is not an ES6 module and has not finished evaluation');
+// throw new EvalError('./cjs is not an ES module and has not finished evaluation');
 ```
 
 ## Advisory
@@ -304,7 +356,7 @@ class SourceTextModule : Script, Module {
 
 class DynamicModule : Module {
   // in order for CommonJS modules to create fully formed
-  // ES6 Module compatibility we need to hook up a static
+  // ES Module compatibility we need to hook up a static
   // View of an Object to set as our exports
   //
   // think of this as calling ImportDeclarationInstantiation using the current
@@ -361,7 +413,7 @@ function DynamicModule(obj) {
           enumerable: Boolean(desc.enumerable)
       });
   });
-  return module_namespace;
+  return Object.freeze(module_namespace);
 }
 ```
 
@@ -370,7 +422,7 @@ function DynamicModule(obj) {
 These are written with the expectation that:
 
 * ModuleNamespaces can be created from existing Objects.
-* WHATWG Loader spec Registry is available as ES6ModuleRegistry.
+* WHATWG Loader spec Registry is available as a ModuleRegistry.
 * ModuleStatus Objects can be created.
 
 The variable names should be hidden from user code using various techniques left out here.
@@ -381,7 +433,7 @@ The variable names should be hidden from user code using various techniques left
 
 ```javascript
 // for posterity, will still throw on circular deps
-ES6ModuleRegistry.set(__filename, new ModuleStatus({
+ModuleRegistry.set(__filename, new ModuleStatus({
     'ready': {'[[Result]]':undefined};
 }));
 ```
@@ -391,7 +443,7 @@ ES6ModuleRegistry.set(__filename, new ModuleStatus({
 ##### On Error
 
 ```javascript
-ES6ModuleRegistry.delete(__filename);
+ModuleRegistry.delete(__filename);
 ```
 
 ##### On Normal Completion
@@ -403,19 +455,19 @@ Object.defineProperty(module_namespace, 'default', {
     writable: false,
     configurable: false
 });
-ES6ModuleRegistry.set(__filename, new ModuleStatus({
+ModuleRegistry.set(__filename, new ModuleStatus({
     'ready': {'[[Result]]':v8.module.DynamicModule(module_namespace)};
 }));
 ```
 
-### ES6 Modules
+### ES Modules
 
 #### Post Parsing
 
 ```javascript
 Object.defineProperty(module, 'exports', {
   get() {return v8.Module.Namespace(module)};
-  set(v) {throw new Error(`${__filename} is an ES6 module and cannot assign to module.exports`)}
+  set(v) {throw new Error(`${__filename} is an ES module and cannot assign to module.exports`)}
   configurable: false,
   enumerable: false
 });
