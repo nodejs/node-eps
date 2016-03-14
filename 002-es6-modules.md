@@ -213,9 +213,19 @@ You will grab `module.exports` when performing an ES import.
 
 ```javascript
 // es.jsm
+
+// grabs the namespace
+import * as baz from './cjs';
+// baz = {
+//   get default() {return module.exports;},
+//   get thing() {return this.default.thing}.bind(baz)
+// }
+
+// grabs "default", aka module.exports directly
 import foo from './cjs';
 // foo = {default:'my-default', thing:'stuff'};
 
+// grabs "default", aka module.exports directly
 import {default as bar} from './cjs';
 // bar = {default:'my-default', thing:'stuff'};
 ```
@@ -291,21 +301,52 @@ bar.then(console.log); // throws, bar is not a Promise
 
 ES modules only ever declare named exports. A default export just exports a property named `default`. `require` will not automatically wrap ES modules in a `Promise`. In the future if top level `await` becomes spec, you can use the `System.loader.import` function to wrap modules and wait on them (top level await can cause deadlock with circular dependencies, node should discourage its use).
 
+##### Examples
+
 Given
 
 ```javascript
 // es.jsm
 let foo = {bar:'my-default'};
+// note:
+//   this is a value
+//   it is not a binding like `export {foo}`
 export default foo;
+foo = null;
 ```
 
 ```javascript
 // cjs.js
 const es_namespace = require('./es');
-// es_namespace = {
-//   default: { 
-//     bar:'my-default'
+// es_namespace ~= {
+//   get default() {
+//     return result_from_evaluating_foo;
 //   }
+// }
+console.log(es_namespace.default);
+// {bar:'my-default'}
+```
+
+------
+
+Given
+
+```javascript
+// es.jsm
+export let foo = {bar:'my-default'};
+export {foo as bar};
+export function f() {};
+export class c {};
+```
+
+```javascript
+// cjs.js
+const es_namespace = require('./es');
+// es_namespace ~= {
+//   get foo() {return foo;}
+//   get bar() {return foo;}
+//   get f() {return f;}
+//   get c() {return c;}
 // }
 ```
 
