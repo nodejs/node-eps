@@ -243,10 +243,10 @@ You will grab `module.exports` when performing an ES import.
 
 ```javascript
 // es.jsm
-import foo from './cjs';
+import foo from './cjs.js';
 // foo = null;
 
-import * as bar from './cjs';
+import * as bar from './cjs.js';
 // bar = {default:null};
 ```
 
@@ -265,10 +265,10 @@ You will grab `module.exports` when performing an ES import.
 
 ```javascript
 // es.jsm
-import foo from './cjs';
+import foo from './cjs.js';
 foo(); // 2
 
-import * as bar from './cjs';
+import * as bar from './cjs.js';
 bar.name; // 'two'
 bar.default(); // 2
 bar(); // throws, bar is not a function
@@ -287,10 +287,10 @@ You will grab `module.exports` when performing an ES import.
 
 ```javascript
 // es.jsm
-import foo from './cjs';
+import foo from './cjs.js';
 foo.then(console.log); // outputs 3
 
-import * as bar from './cjs';
+import * as bar from './cjs.js';
 bar.default.then(console.log); // outputs 3
 bar.then(console.log); // throws, bar is not a Promise
 ```
@@ -434,9 +434,9 @@ require('./es');
 
 ```javascript
 // es.jsm
-import * as ns from './cjs';
+import * as ns from './cjs.js';
 // ns = ?
-import cjs from './cjs';
+import cjs from './cjs.js';
 // cjs = ?
 ```
 
