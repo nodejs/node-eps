@@ -215,18 +215,18 @@ You will grab `module.exports` when performing an ES import.
 // es.jsm
 
 // grabs the namespace
-import * as baz from './cjs';
+import * as baz from './cjs.js';
 // baz = {
 //   get default() {return module.exports;},
 //   get thing() {return this.default.thing}.bind(baz)
 // }
 
 // grabs "default", aka module.exports directly
-import foo from './cjs';
+import foo from './cjs.js';
 // foo = {default:'my-default', thing:'stuff'};
 
 // grabs "default", aka module.exports directly
-import {default as bar} from './cjs';
+import {default as bar} from './cjs.js';
 // bar = {default:'my-default', thing:'stuff'};
 ```
 
@@ -450,7 +450,7 @@ This would change the ES module behavior to:
 
 ```javascript
 // es.jsm
-import * as ns from './cjs';
+import * as ns from './cjs.js';
 // throw new EvalError('./cjs is not an ES module and has not finished evaluation');
 ```
 
