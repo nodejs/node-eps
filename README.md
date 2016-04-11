@@ -22,17 +22,28 @@ Node stands and where it wants to be in the future.
 
 EP documents don't follow a given format (other than being written in
 MarkDown). It is, however, required that all EPs include the following
-information at the top of the file:
+template and information at the top of the file:
 
-* Title
-* Name of author
-* Status (more on statuses later, new documents must be submitted with the
-'draft' status
-* Date
+```
+| Title  | Tile of EP      |
+|--------|-----------------|
+| Author | @gihub_handle   |
+| Status | DRAFT           |
+| Date   | YYYY-MM-DD      |
+```
 
-The document file name must conform to the following format:
-`"XXX-title-ish.md"` and it must be added to the document index in
-`000-index.md`.
+The "Status" field should always read **DRAFT**. This will be changed to
+**ACCEPTED** or **REJECTED** when the EP lands.
+
+The document file name must conform to the format `"XXX-title-ish.md"`
+(literally starting with `XXX` and not a self assigned number). At the time the
+EP lands it will be assigned a number and added to `000-index.md`. There is no
+need for a PR author to add the file to the index since no number has yet been
+given.
+
+Files should follow the convention of keeping lines to a maximum of 80
+characters. Exceptions can be made in cases like long URLs or when pasting the
+output of an application. For example a stack trace from gdb.
 
 ## Content
 
