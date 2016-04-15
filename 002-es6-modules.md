@@ -94,9 +94,9 @@ This still guarantees:
 
 ### Determining if source is an ES Module
 
-A new filetype will be recognised, `.jsm` as ES modules. They will be treated as a different loading semantic but compatible with existing systems, just like `.node`, `.json`, or usage of `require.extension` (even though deprecated) are compatible. It would be ideal if we could register the filetype with IANA as an offical file type, see [TC39 issue](https://github.com/tc39/ecma262/issues/322). Though it seems this would need to go through the [IESG](https://www.ietf.org/iesg/) and it seems browsers are non-plussed on introducing a new MIME.
+A new filetype will be recognised, `.mjs` as ES modules. They will be treated as a different loading semantic but compatible with existing systems, just like `.node`, `.json`, or usage of `require.extension` (even though deprecated) are compatible. It would be ideal if we could register the filetype with IANA as an offical file type, see [TC39 issue](https://github.com/tc39/ecma262/issues/322). Though it seems this would need to go through the [IESG](https://www.ietf.org/iesg/) and it seems browsers are non-plussed on introducing a new MIME.
 
-The `.jsm` file extension will have a higher loading priority than `.js`.
+The `.mjs` file extension will have a higher loading priority than `.js`.
 
 ### ES Import Path Resolution
 
@@ -185,7 +185,7 @@ This will mean vendored modules are not included in the search path since `packa
 
 #### Shipping both ES and CJS
 
-Since `node_modules` continues to use searching, when a `package.json` main is encountered we are still able to perform file extension searches. If we have 2 entry points `index.jsm` and `index.js` by setting `main:"./index"` we can let Node pick up either depending on what is supported, without us needing to manage multiple entry points separately.
+Since `node_modules` continues to use searching, when a `package.json` main is encountered we are still able to perform file extension searches. If we have 2 entry points `index.mjs` and `index.js` by setting `main:"./index"` we can let Node pick up either depending on what is supported, without us needing to manage multiple entry points separately.
 
 ##### Excluding main
 
@@ -212,7 +212,7 @@ module.exports = {
 You will grab `module.exports` when performing an ES import.
 
 ```javascript
-// es.jsm
+// es.mjs
 
 // grabs the namespace
 import * as baz from './cjs.js';
@@ -242,7 +242,7 @@ module.exports = null;
 You will grab `module.exports` when performing an ES import.
 
 ```javascript
-// es.jsm
+// es.mjs
 import foo from './cjs.js';
 // foo = null;
 
@@ -264,7 +264,7 @@ module.exports = function two() {
 You will grab `module.exports` when performing an ES import.
 
 ```javascript
-// es.jsm
+// es.mjs
 import foo from './cjs.js';
 foo(); // 2
 
@@ -286,7 +286,7 @@ module.exports = Promise.resolve(3);
 You will grab `module.exports` when performing an ES import.
 
 ```javascript
-// es.jsm
+// es.mjs
 import foo from './cjs.js';
 foo.then(console.log); // outputs 3
 
@@ -306,7 +306,7 @@ ES modules only ever declare named exports. A default export just exports a prop
 Given
 
 ```javascript
-// es.jsm
+// es.mjs
 let foo = {bar:'my-default'};
 // note:
 //   this is a value
@@ -332,7 +332,7 @@ console.log(es_namespace.default);
 Given
 
 ```javascript
-// es.jsm
+// es.mjs
 export let foo = {bar:'my-default'};
 export {foo as bar};
 export function f() {};
@@ -433,7 +433,7 @@ require('./es');
 ```
 
 ```javascript
-// es.jsm
+// es.mjs
 import * as ns from './cjs.js';
 // ns = ?
 import cjs from './cjs.js';
@@ -449,7 +449,7 @@ Since this case is coming from ES, we will not break any existing circular depen
 This would change the ES module behavior to:
 
 ```javascript
-// es.jsm
+// es.mjs
 import * as ns from './cjs.js';
 // throw new EvalError('./cjs is not an ES module and has not finished evaluation');
 ```
