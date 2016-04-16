@@ -96,7 +96,58 @@ This still guarantees:
 
 A new filetype will be recognised, `.mjs` as ES modules. They will be treated as a different loading semantic but compatible with existing systems, just like `.node`, `.json`, or usage of `require.extension` (even though deprecated) are compatible. It would be ideal if we could register the filetype with IANA as an offical file type, see [TC39 issue](https://github.com/tc39/ecma262/issues/322). Though it seems this would need to go through the [IESG](https://www.ietf.org/iesg/) and it seems browsers are non-plussed on introducing a new MIME.
 
-The `.mjs` file extension will have a higher loading priority than `.js`.
+The `.mjs` file extension will have a higher loading priority than `.js` for `require`. This means that, once the node resolution algorithm reaches file expansion, the path for `path + '.mjs'` would be attempted prior to `path + '.js'` when performing `require(path)`.
+
+#### Reason for decision
+
+The choice of `.mjs` was made due to a number of factors. 
+
+* `.jsm`
+    * conflict with Firefox, which includes escalated [privileges over the `file://` protocol](https://developer.mozilla.org/en-US/docs/Mozilla/JavaScript_code_modules/Using#The_URL_for_a_code_module) that can access [sensistive information](https://developer.mozilla.org/en-US/docs/Mozilla/JavaScript_code_modules/Services.jsm). This could affect things like [test runners providing browser test viewers](https://mochajs.org/#running-mocha-in-the-browser)
+    * [decent usage on npm](https://gist.github.com/ChALkeR/9e1fb15d0a0e18589e6dadc34b80875d)
+* `.es`
+    * lacks conflicts with other major software
+    * removes the JS moniker/signifier in many projects such as Node.js, Cylon.js, Three.js, DynJS, JSX, ...
+    * removes JavaScript -> JS acronym association for learning
+    * is an existing TLD, could be place for squatting / confusion.
+    * [small usage on npm](https://gist.github.com/ChALkeR/261550d903ec9867bbab)
+* `.m.js`
+    * potential conflict with existing software targetting wrong goal
+    * allows `*.js` style globbing to work still
+    * toolchain problems for asset pipelines/node/editors that only check after last `.`
+    * [small usage on npm](https://gist.github.com/ChALkeR/c10642f2531b1be36e5d)
+* `.mjs`
+    * lacks conflicts with other major software, conflicts with [metascript](https://github.com/metascript/metascript) but that was last published in 2014
+    
+There is knowledge of breakage for code that *upgrades* inner package dependencies such as `require('foo/bar.js')`. As `bar.js` may move to `bar.mjs`. Since `bar.js` is not the listed entry point this was considered ok. If foo was providing this file explicitly like `lodash` has: this can be mitigated easily by using as proxy module should `foo` choose to provide one:
+
+```js
+Object.defineProperty(module, 'exports', {
+  get() {
+    return require(__filename.replace(/\.js$/,'.mjs'))
+  },
+  configurable:false
+});
+Object.freeze(module);  
+```
+
+Concerns of ecosystem damage when using a new file extension were considered as well. Firewall rules and server scripts using `*.js` as the detection mechanism for JavaScript would be affected by our change, largely just affecting browsers. However, new file extensions and mimes continue to be introduced and supported by such things. If a front-end is unable to make such a change, using a rewrite rule from `.mjs` to `.js` should suffieciently mitigate this.
+    
+There were proposals of using `package.json` as an out of band configuration as well.
+
+* removes one-off file execution for quick scripting like using `.save` in the repl then running.
+* causes editors/asset pipelines to have knowledge of this. most work solely on file extension and it would be prohibitive to change.
+    * Build asset pipelines in particular would be affected such as the Rails asset pipeline
+    * OS file associations could be complicated since they work after the last `.`
+    * HTTP/2 PUSH solutions would also need this and would be affected
+* no direction for complete removal of CJS. A file extension leads to a world without `.js` and only `.mjs` files. This would be a permanent field in `package.json`
+* per file mode requirements mean using globs or large lists
+    * discussion of allowing only one mode per package was a non-starter for migration path issues
+* `package.json` is not required in `node_modules/` and raw files can live in `node_modules/`
+    * eg. `node_modules/foo/index.js`
+    * eg. `node_modules/foo.js`
+* complex abstraction to handle symlinks used by tools like [link-local](https://github.com/timoxley/linklocal)
+    * eg. `node_modules/foo -> ../app/components/foo.js`
 
 ### ES Import Path Resolution
 
