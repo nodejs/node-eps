@@ -118,6 +118,7 @@ The choice of `.mjs` was made due to a number of factors.
     * [small usage on npm](https://gist.github.com/ChALkeR/c10642f2531b1be36e5d)
 * `.mjs`
     * lacks conflicts with other major software, conflicts with [metascript](https://github.com/metascript/metascript) but that was last published in 2014
+    * [small usage on npm](https://gist.github.com/bmeck/07a5beb6541c884acbe908df7b28df3f)
     
 There is knowledge of breakage for code that *upgrades* inner package dependencies such as `require('foo/bar.js')`. As `bar.js` may move to `bar.mjs`. Since `bar.js` is not the listed entry point this was considered ok. If foo was providing this file explicitly like `lodash` has: this can be mitigated easily by using as proxy module should `foo` choose to provide one:
 
