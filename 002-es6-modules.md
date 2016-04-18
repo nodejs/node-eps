@@ -139,7 +139,6 @@ There were proposals of using `package.json` as an out of band configuration as 
 * removes one-off file execution for quick scripting like using `.save` in the repl then running.
 * causes editors/asset pipelines to have knowledge of this. most work solely on file extension and it would be prohibitive to change.
     * Build asset pipelines in particular would be affected such as the Rails asset pipeline
-    * OS file associations could be complicated since they work after the last `.`
     * HTTP/2 PUSH solutions would also need this and would be affected
 * no direction for complete removal of CJS. A file extension leads to a world without `.js` and only `.mjs` files. This would be a permanent field in `package.json`
 * per file mode requirements mean using globs or large lists
