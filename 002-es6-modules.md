@@ -7,7 +7,9 @@ Date   | 7 Jan 2016
 
 **NOTE:** `Draft` status means that this has not been accepted for implementation into node core. This is the document of the standard node core would implement a feature should this draft be moved to `Accepted`.
 
-It is our intent to:
+---
+
+The intent of this standard is to:
 
 * implement interoperability for ES modules and node's existing module system
 * create a **Registry Object** (see WHATWG section below) compatible with the WHATWG Loader Registry
