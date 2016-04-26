@@ -9,7 +9,7 @@ EPs are used when the proposed feature is a substantial new API, is too broad
 or would modify APIs heavily. Minor changes do not require writing an EP.  What
 is and isn't minor is subjective, so as a general rule, users should discuss
 the proposal briefly by other means (issue tracker, mailing list or IRC) and
-write a EP when requested by the Node core team.
+write an EP when requested by the Node core team.
 
 ## Rational
 
@@ -32,9 +32,6 @@ template and information at the top of the file:
 | Date   | YYYY-MM-DD      |
 ```
 
-The "Status" field should always read **DRAFT**. This will be changed to
-**ACCEPTED** or **REJECTED** when the EP lands.
-
 The document file name must conform to the format `"XXX-title-ish.md"`
 (literally starting with `XXX` and not a self assigned number). At the time the
 EP lands it will be assigned a number and added to `000-index.md`. There is no
@@ -44,6 +41,9 @@ given.
 Files should follow the convention of keeping lines to a maximum of 80
 characters. Exceptions can be made in cases like long URLs or when pasting the
 output of an application. For example a stack trace from gdb.
+
+More information of the "Status" field can be found in
+[Progress of an EP](#progress-of-an-ep).
 
 ## Content
 
@@ -55,7 +55,7 @@ diagram, pseudocode or actual C code.
 
 All EP documents must be MIT licensed.
 
-## Progress of a EP
+## Progress of an EP
 
 All EPs will be committed to the repository regardless of their acceptance.
 The initial status shall be **"DRAFT"**.
@@ -69,4 +69,4 @@ rejection.
 A document shall also be committed in **"DRAFT"** status. This means consensus
 has not been reached yet.
 
-The author of a EP is expected to actually pursue and implement the proposal.
+The author of an EP is expected to actually pursue and implement the proposal.
