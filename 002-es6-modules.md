@@ -4,9 +4,9 @@
 | Status | DRAFT                       |
 | Date   | 2016-01-07                  |
 
-**NOTE:** `DRAFT` status does not mean ES6 modules will be implemented in Node
-core. Instead that this is the standard, should Node core decide to implement
-ES6 modules. At which time this draft would be moved to `ACCEPTED`.
+**NOTE:** `DRAFT` status does not mean ES6 modules will be implemented in node
+core. Instead, it means that this is the standard should Node core decide to
+implement ES6 modules, at which time this draft would be moved to `ACCEPTED`.
 
 ---
 
@@ -249,8 +249,8 @@ The choice of `.mjs` was made due to a number of factors.
 #### 5.1.1.1 Inter package loading using file extension  breakage.
 
 There is knowledge of breakage for code that *upgrades* inner package
-dependencies such as `require('foo/bar.js')`. As `bar.js` may move to
-`bar.mjs`. Since `bar.js` is not the listed entry point this was considered
+dependencies such as `require('foo/bar.js')`, as `bar.js` may move to
+`bar.mjs`. Since `bar.js` is not the listed entry point, this was considered
 okay. If foo was providing this file explicitly like `lodash` has this can be
 mitigated easily by using as proxy module should `foo` choose to provide one:
 
