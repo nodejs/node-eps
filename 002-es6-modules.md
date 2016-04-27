@@ -143,7 +143,7 @@ The choice of `.mjs` was made due to a number of factors.
 * `.mjs`
     * lacks conflicts with other major software, conflicts with
       [metascript](https://github.com/metascript/metascript) but that was last
-      published in 2014
+      published in 2015
     * [small usage on npm](https://gist.github.com/bmeck/07a5beb6541c884acbe908df7b28df3f)
 
 There is knowledge of breakage for code that *upgrades* inner package
