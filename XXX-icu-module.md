@@ -1,7 +1,7 @@
 | Title  | ICU Module                  |
 |--------|-----------------------------|
 | Author | @jasnell                    |
-| Status | REJECTED                    |
+| Status | DRAFT                       |
 | Date   | 2016-04-20                  |
 
 ## Description
@@ -9,7 +9,7 @@
 The ICU4C library that we use for internationalization contains a significant
 array of additional functionality not currently exposed by the EcmaScript 402
 standard. Some of this additional functionality would be useful to expose via
-a new `'icu'` or (`'uncode'`) module.
+a new `'icu'` or (`'unicode'`) module.
 
 ## Interface
 
