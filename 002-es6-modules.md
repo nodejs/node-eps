@@ -199,11 +199,16 @@ ES `import` statements will not perform non-exact searches on relative or
 absolute paths, unlike `require()`. This means that no file extensions, or
 index files will be searched for when using relative or absolute paths.
 
-`node_modules` based paths will continue to use searching for both
-compatibility and to not limit the ability to have `package.json` support both
-ES and CJS entry points in a single codebase. `node_modules` based behavior
-will continue to be unchanged and look to parent `node_modules` directories
-recursively as well.
+`node_modules` based paths (sometimes called "bare" paths) will continue to use
+searching for both compatibility and to not limit the ability to have
+`package.json` support both ES and CJS entry points in a single
+codebase.`node_modules` based behavior will continue to be unchanged and look
+to parent `node_modules` directories recursively as well. This searching
+behavior explicitly includes inner package searching such ass `foo/bar`.
+
+Any entry into `node_modules` via paths not starting with "/", "./", or "../"
+will be using the same mechanism of searching while resolving their **entry
+point** as `require()`.
 
 In summary so far:
 
@@ -213,6 +218,7 @@ In summary so far:
 // does not search:
 //   ./foo.js
 //   ./foo/index.js
+//   ./foo/index.mjs
 //   ./foo/package.json
 //   etc.
 import './foo';
@@ -224,6 +230,7 @@ import './foo';
 // does not search:
 //   /bar.js
 //   /bar/index.js
+//   /bar/index.mjs
 //   /bar/package.json
 //   etc.
 import '/bar';
@@ -231,15 +238,36 @@ import '/bar';
 
 ```javascript
 // continues to *search*:
+//   ./node_modules/baz.mjs
 //   ./node_modules/baz.js
 //   ./node_modules/baz/package.json
+//   ./node_modules/baz/index.mjs
 //   ./node_modules/baz/index.js
 // and parent node_modules:
+//   ../node_modules/baz.mjs
 //   ../node_modules/baz.js
 //   ../node_modules/baz/package.json
+//   ../node_modules/baz/index.mjs
 //   ../node_modules/baz/index.js
 //   etc.
 import 'baz';
+```
+
+```javascript
+// continues to *search*:
+//   ./node_modules/abc/123.mjs
+//   ./node_modules/abc/123.js
+//   ./node_modules/abc/123/package.json
+//   ./node_modules/abc/123/index.mjs
+//   ./node_modules/abc/123/index.js
+// and parent node_modules:
+//   ../node_modules/abc/123.mjs
+//   ../node_modules/abc/123.js
+//   ../node_modules/abc/123/package.json
+//   ../node_modules/abc/123/index.mjs
+//   ../node_modules/abc/123/index.js
+//   etc.
+import 'abc/123';
 ```
 
 #### Removal of non-local dependencies
