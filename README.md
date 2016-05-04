@@ -58,13 +58,13 @@ All EP documents must be MIT licensed.
 ## Progress of an EP
 
 All EPs will be committed to the repository regardless of their acceptance.
-The initial status shall either be **"INCUBATING"** or **"DRAFT"**.
+The initial status shall either be **"WIP"** or **"DRAFT"**.
 
-If the status is **"INCUBATING"** that means that it is expected that the
-EP will be iterated on over a period of time before it becomes a
-complete proposal such that could be reviewed and move to **"ACCEPTED"**.
-This status allows visiblity and feedback while setting the appropriate
-expectation in terms of completeness.
+If the status is **"WIP"**, that means that it is a work in progress and
+is expected that the EP will be iterated on over a period of time
+before it becomes a complete proposal such that could be reviewed
+and move to **"ACCEPTED"**.  This status allows visiblity and feedback
+while setting the appropriate expectation in terms of completeness.
 
 If the status is **"DRAFT"**, that means the authors believe the prosoal
 is complete and is ready to be reviewed in the context of deciding to
@@ -76,7 +76,7 @@ rejected the status shall be **"REJECTED"**. When a document is rejected a
 member of the core team should append a section describing the reasons for
 rejection.
 
-A document shall also be committed in **"INCUBATING"** or **"DRAFT"**
+A document shall also be committed in **"WIP"** or **"DRAFT"**
 status. This means consensus has not been reached yet.
 
 The author of an EP is expected to actually pursue and implement the proposal.
