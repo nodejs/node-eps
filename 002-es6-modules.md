@@ -337,6 +337,12 @@ Since `main` in `package.json` is entirely optional even inside of npm
 packages, some people may prefer to exclude main entirely in the case of using
 `./index` as that is still in the node module search algorithm.
 
+### `this` in ES modules
+
+Unlike CJS, ES modules will have a `this` value set to the global scope. This
+is a breaking change, CJS modules have a this value set to their `module`
+binding.
+
 ### ES consuming CommonJS
 
 #### default imports
