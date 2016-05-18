@@ -4,19 +4,19 @@
 | Status | DRAFT                       |
 | Date   | 2016-01-07                  |
 
-**NOTE:** `DRAFT` status does not mean ES6 modules will be implemented in node
-core. Instead that this is the standard, should node core decide to implement
+**NOTE:** `DRAFT` status does not mean ES6 modules will be implemented in Node
+core. Instead that this is the standard, should Node core decide to implement
 ES6 modules. At which time this draft would be moved to `ACCEPTED`.
 
 ---
 
 The intent of this standard is to:
 
-* implement interoperability for ES modules and node's existing module system
-* create a **[Registry Object][1]** (see WHATWG section below) compatible with
+* implement interoperability for ES modules and Node's existing module system
+* create a **Registry Object** (see WHATWG section below) compatible with
   the [WHATWG Loader](http://whatwg.github.io/loader/) Registry
 
-## Purpose
+## 1. Purpose
 
 1. Allow a common module syntax for Browser and Server.
 2. Allow a common registry for inspection by Browser and Server
@@ -24,100 +24,197 @@ The intent of this standard is to:
     * These will most likely be represented by metaproperties like
       `import.context`, but the spec is not yet fully in place.
 
-## Related
+## 2. Related
 
 
-[ECMA262][1] discusses the syntax and semantics of related syntax, and
-introduces:
+[ECMA262](tc39.github.io/ecma262/) discusses the syntax and semantics of
+related syntax, and introduces:
 
-#### Types
+### 2.1. Types
 
-* **[ModuleRecord]**
-    - Defines the list of imports via [ImportEntry].
-    - Defines the list of exports via [ExportEntry].
+* **[ModuleRecord]
+(https://tc39.github.io/ecma262/#sec-abstract-module-records)**
+    - Defines the list of imports via `[[ImportEntry]]`.
+    - Defines the list of exports via `[[ExportEntry]]`.
 
-* **[ModuleNamespace][5]**
-    - Represents a read-only static set of live bindings of a module's exports.
+* **[ModuleNamespace]
+(https://tc39.github.io/ecma262/#sec-module-namespace-objects)**
+    - Represents a read-only static set of bindings to a module's exports.
 
-#### Operations
+### 2.2. Operations
 
-* **[ParseModule]**
-    - Creates a [SourceTextModuleRecord][1] from source code.
+* **[ParseModule](https://tc39.github.io/ecma262/#sec-parsemodule)**
+    - Creates a [SourceTextModuleRecord]
+    (https://tc39.github.io/ecma262/#sec-source-text-module-records) from
+    source code.
 
-* **[HostResolveImportedModule]**
-    - A hook for when an import is exactly performed.
+* **[HostResolveImportedModule]
+(https://tc39.github.io/ecma262/#sec-hostresolveimportedmodule)**
+    - A hook for when an import is exactly performed. This returns a
+      `ModuleRecord`. Used as a means to grab modules from Node's loader/cache.
 
-* **[CreateImportBinding]**
+* **[CreateImportBinding]
+(https://tc39.github.io/ecma262/#sec-createimportbinding)**
     - A means to create a shared binding (variable) from an export to an
       import. Required for the "live" binding of imports.
 
-* **[ModuleNamespaceCreate]**
+* **[ModuleNamespaceCreate]
+(https://tc39.github.io/ecma262/#sec-modulenamespacecreate)**
     - Provides a means of creating a list of exports manually, used so that
-      CommonJS `module.exports` can create ModuleRecords that are prepopulated.
+      CommonJS `module.exports` can create `ModuleRecord`s that are
+      prepopulated.
 
 
 [WHATWG Loader](https://github.com/whatwg/loader) discusses the design of
-module metadata in a [Registry][1]. All actions regarding the Registry are
-synchronous.
+module metadata in a [Registry](https://whatwg.github.io/loader/#registry). All
+actions regarding the Registry can be done
+synchronously, though JS level API uses Promises.
 
 **NOTE:** It is not Node's intent to implement the asynchronous pipeline in the
-Loader specification. There is discussion about including a synchronous
-pipeline in the specification as an addendum.
+WHATWG Loader specification.
 
-## Additional Structures Required
+## 3. Additional Structures Required
 
-### **DynamicModuleRecord**
+### 3.1. **DynamicModuleRecord**
 
-A Module Record that presents a view of an Object for its `[[Namespace]]`
+A Module Record that represents a view of an Object for its `[[Namespace]]`
 rather than coming from an environment record.
 
-All exported values are declarative. That means that they are known after the
-file is parsed, but before it is evaluated.
+`DynamicModuleRecord` preserves the feature that exported values are known when
+it comes time for `HostResolveImportedModule` to return. That means that they
+are known after the
+file is parsed, but before it is evaluated. This behavior is preserved by Node
+synchronously executing CJS files when they are encountered during
+`HostResolveImportedModule`.
 
-When creating a `DynamicModuleRecord` the list of exports is frozen upon
-construction. No new exports may be added. No exports may be removed.
+When creating a `DynamicModuleRecord` the [`[[Exports]]`]
+(https://tc39.github.io/ecma262/#table-29) is frozen upon construction. No new
+exports may be added. No exports may be removed. The values of the exports will
+continue to be mutable however.
 
-## Algorithm
+### 3.1.1 DynamicModuleCreate(O)
 
-When loading a file:
+The abstract operation `DynamicModuleCreate` with arguments `namespace` is used
+to allow creation of new `DynamicModuleRecord`s. It performs the following
+steps:
 
-1. Determine if file is ES or CommonJS (CJS).
-2. If CJS
-  1. Evaluate immediately
-  2. Produce a DynamicModuleRecord from `module.exports`
-3. If ES
-  1. Parse for `import`/`export`s and keep record, in order to create bindings
-  2. Gather all submodules by performing loading dependencies recursively
-    * See circular dep semantics below
-  3. Connect `import` bindings for all relevant submodules (see
-     [ModuleDeclarationInstantiation])
-  4. Evaluate
+1. Let M be a newly created object.
+2. Set M's essential internal methods to the definitions specified in
+   [15.2.1.15 Abstract Module Records]
+   (https://tc39.github.io/ecma262/#sec-abstract-module-records)
+3. Set M's [[Realm]] internal slot to the current Realm Record.
+4. Set M's [[Namespace]] internal slot to DelegatedModuleNamespaceObjectCreate
+   (`M`, `O`)
+5. Set M's [[Environment]] internal slot to NewObjectEnvironment(`M`.[[Namespace]], **null**)
+6. Set M's [[Evaluated]] internal slot to **true**
+7. Return M
 
-This still guarantees:
+### 3.2. **DelegatedModuleNamespaceObject**
+
+A `ModuleNamespaceObject` that performs delegation to an Object when accessing
+properties. This is used for delegation behavior from CJS `module.exports` when
+imported by ES modules.
+
+#### Table 1: Internal Slots of DelegatedModuleNamespaceObject Namespace Exotic
+Objects
+
+Field Name | Value Type | Meaning
+---| --- | ---
+[[Delegate]] | Object  | The Object from which to delegate access
+
+#### 3.2.1. `[[Get]] (P, Receiver)`
+
+When the [[Get]] internal method of a module namespace exotic object O is
+called with property key P and ECMAScript language value Receiver, the
+following steps are taken:
+
+1. Assert: IsPropertyKey(`P`) is true.
+2. If Type(`P`) is Symbol, then
+3. Return ? OrdinaryGet(`O`,`P`,` Receiver`).
+4. Let exports be the value of `O`'s `[[Exports]]` internal slot.
+5. If `P` is not an element of exports, return **undefined**.
+6. Let m be the value of `O`'s `[[Object]]` internal slot.
+7. If `P` equals **"default"**, return `m`.
+7. Let `value` be ! `O`.`[[Get]]`(`P`,` O`)
+8. Return `value`
+
+#### 3.2.2. `DelegatedModuleNamespaceObjectCreate(module, O)`
+
+The abstract operation DelegatedModuleNamespaceObjectCreate with arguments `O`
+is used to create a DelegatedModuleNamespaceObject. It performs the following
+steps:
+
+1. Assert: `module` is a Module Record.
+2. Assert: `module`.[[Namespace]] is **undefined**.
+3. Let `NS` be a newly created object.
+4. Set `NS`'s essential internal methods to the definitions specified in [9.4.6
+   Module Namespace Exotic Objects]
+   (https://tc39.github.io/ecma262/#sec-module-namespace-exotic-objects)
+5. Set `NS`'s [[Module]] internal slot to `module`
+6. Let `exports` be a new List
+7. Let `p` be `O`.
+8. Let `done` be **false**.
+9. Repeat while `done` is **false**,
+    1. If `p` is null, let `done `be **true**.
+    2. Else,
+        1. For each `property` in OwnPropertyKeys(`p`)
+            1. If `property` does not equal **"default"** and `exports` does
+               not contain `property`, add `property` to exports
+        2. If the [[GetPrototypeOf]] internal method of `p` is not the ordinary
+           object internal method defined in [9.1.1]
+           (https://tc39.github.io/ecma262/#sec-ordinary-object-internal-methods-and-internal-slots-getprototypeof)
+           , let `done` be **true**.
+        3. Else, let `p` be the value of p's [[Prototype]] internal slot.
+10. Set the value of the [[Exports]] internal slot of `NS` to `exports`.
+11. Return `NS`
+
+## 4. Algorithm
+
+### 4.1. NodeModuleEvaluationJob(source, mode)
+
+The abstractjob operation NodeModuleEvaluationJob with parameters `source` and
+`mode`. The results of this should be placed in the cache that
+`HostResolveImportedModule` uses.
+
+1. If `mode` equals CJS
+    1. Let `body` be the bootstraped form of `source` with necessary CJS
+       wrapper code.
+    2. Call ! ScriptEvaluationJob(`body`, **undefined**)
+    3. Return ! DynamicModuleCreate from `module.exports`
+2. Else if `mode` equals ES
+    1. Let `M` be ! ParseModule(`source`)
+    2. Perform the algorithm listed in **4.** on `M`.[[RequestedModules]] while
+       respecting the semantics in **5.**
+    3. Connect `import` bindings for all relevant submodules using
+     [ModuleDeclarationInstantiation from the Abstract Module Record M]
+     (https://tc39.github.io/ecma262/#table-37)
+    4. Call ! `M`.[[ModuleEvaluation]]
+    5. Return `M`
+
+**NOTE:** This still guarantees:
 
 * that ES module dependencies are all executed prior to the module itself
 * CJS modules have a full shape prior to being handed to ES modules
 * allows CJS modules to imperatively start the loading of other modules,
   including ES modules
 
-## Semantics
+## 5. Semantics
 
-### Determining if source is an ES Module
+### 5.1. Determining if source is an ES Module
 
-A new file type will be recognised, `.mjs` as ES modules. They will be treated
-as a different loading semantic but compatible with existing systems, just like
-`.node`, `.json`, or usage of `require.extension` (even though deprecated) are
-compatible. It would be ideal if we could register the file type with IANA as
-an official file type, see [TC39 issue][3]. Though it seems this would need to
-go through the [IESG](https://www.ietf.org/iesg/) and it seems browsers are
-non-plussed on introducing a new MIME.
+A new file type will be recognised, `.mjs` as ES modules. `.mjs` files will be
+treated as having different loading semantics that are compatible with the
+existing CJS system, just like `.node`, `.json`, or usage of
+`require.extension` (even though deprecated) are compatible. This file type
+will be registered with IANA as an official file type, see [TC39 issue]
+(https://github.com/tc39/ecma262/issues/322).
 
 The `.mjs` file extension will have a higher loading priority than `.js` for
-`require`. This means that, once the node resolution algorithm reaches file
+`require`. This means that, once the Node resolution algorithm reaches file
 expansion, the path for `path + '.mjs'` would be attempted prior to `path +
 '.js'` when performing `require(path)`.
 
-#### Reason for decision
+#### 5.1.1 Reason for decision
 
 The choice of `.mjs` was made due to a number of factors.
 
@@ -126,7 +223,8 @@ The choice of `.mjs` was made due to a number of factors.
       [privileges over the `file://` protocol] that can access
       [sensistive information][4]. This could affect things like
       [test runners providing browser test viewers]
-    * [decent usage on npm](https://gist.github.com/ChALkeR/9e1fb15d0a0e18589e6dadc34b80875d)
+    * [decent usage on npm]
+      (https://gist.github.com/ChALkeR/9e1fb15d0a0e18589e6dadc34b80875d)
 * `.es`
     * lacks conflicts with other major software
     * removes the JS moniker/signifier in many projects such as Node.js,
@@ -137,14 +235,18 @@ The choice of `.mjs` was made due to a number of factors.
 * `.m.js`
     * potential conflict with existing software targeting wrong goal
     * allows `*.js` style globbing to work still
-    * toolchain problems for asset pipelines/node/editors that only check after
+    * toolchain problems for asset pipelines/Node/editors that only check after
       last `.`
     * [small usage on npm](https://gist.github.com/ChALkeR/c10642f2531b1be36e5d)
 * `.mjs`
     * lacks conflicts with other major software, conflicts with
       [metascript](https://github.com/metascript/metascript) but that was last
       published in 2015
-    * [small usage on npm](https://gist.github.com/bmeck/07a5beb6541c884acbe908df7b28df3f)
+    * [small usage on npm]
+      (https://gist.github.com/bmeck/07a5beb6541c884acbe908df7b28df3f)
+
+
+#### 5.1.1.1 Inter package loading using file extension  breakage.
 
 There is knowledge of breakage for code that *upgrades* inner package
 dependencies such as `require('foo/bar.js')`. As `bar.js` may move to
@@ -161,6 +263,11 @@ Object.defineProperty(module, 'exports', {
 });
 Object.freeze(module);
 ```
+
+It is recommended going forward that developers not rely on the file extensions
+in packages they do not control.
+
+### 5.1.2. Ecosystem Concerns
 
 Concerns of ecosystem damage when using a new file extension were considered as
 well. Firewall rules and server scripts using `*.js` as the detection mechanism
@@ -193,51 +300,38 @@ well.
   [link-local](https://github.com/timoxley/linklocal)
     * e.g. `node_modules/foo -> ../app/components/foo.js`
 
-### ES Import Path Resolution
+### 5.2. ES Import Path Resolution
 
-ES `import` statements will not perform non-exact searches on relative or
-absolute paths, unlike `require()`. This means that no file extensions, or
-index files will be searched for when using relative or absolute paths.
+ES `import` statements will perform non-exact searches on relative or
+absolute paths, like `require()`. This means that file extensions, and
+index files will be searched,
 
-`node_modules` based paths (sometimes called "bare" paths) will continue to use
-searching for both compatibility and to not limit the ability to have
-`package.json` support both ES and CJS entry points in a single
-codebase.`node_modules` based behavior will continue to be unchanged and look
-to parent `node_modules` directories recursively as well. This searching
-behavior explicitly includes inner package searching such ass `foo/bar`.
-
-Any entry into `node_modules` via paths not starting with "/", "./", or "../"
-will be using the same mechanism of searching while resolving their **entry
-point** as `require()`.
-
-In summary so far:
+In summary:
 
 ```javascript
-// only looks at
-//   ./foo
-// does not search:
+// looks at
+//   ./foo.mjs
 //   ./foo.js
-//   ./foo/index.js
-//   ./foo/index.mjs
 //   ./foo/package.json
+//   ./foo/index.mjs
+//   ./foo/index.js
 //   etc.
 import './foo';
 ```
 
 ```javascript
-// only looks at
-//   /bar
-// does not search:
+// looks at
+//   /bar.mjs
 //   /bar.js
-//   /bar/index.js
-//   /bar/index.mjs
 //   /bar/package.json
+//   /bar/index.mjs
+//   /bar/index.js
 //   etc.
 import '/bar';
 ```
 
 ```javascript
-// continues to *search*:
+// looks at:
 //   ./node_modules/baz.mjs
 //   ./node_modules/baz.js
 //   ./node_modules/baz/package.json
@@ -254,7 +348,7 @@ import 'baz';
 ```
 
 ```javascript
-// continues to *search*:
+// looks at:
 //   ./node_modules/abc/123.mjs
 //   ./node_modules/abc/123.js
 //   ./node_modules/abc/123/package.json
@@ -270,7 +364,7 @@ import 'baz';
 import 'abc/123';
 ```
 
-#### Removal of non-local dependencies
+#### 5.2.1. Removal of non-local dependencies
 
 All of the following will not be supported by the `import` statement:
 
@@ -281,7 +375,7 @@ All of the following will not be supported by the `import` statement:
 
 Use local dependencies, and symbolic links as needed.
 
-##### How to support non-local dependencies
+##### 5.2.1.1. How to support non-local dependencies
 
 Although not recommended, and in fact discouraged, there is a way to support
 non-local dependencies. **USE THIS AT YOUR OWN DISCRETION**.
@@ -292,7 +386,7 @@ $HOME/.node_modules/foo/`, etc. will continue to be supported.
 Adding a parent directory with `node_modules` symlinked will be an effective
 strategy for recreating these functionalities. This will incur the known
 problems with non-local dependencies, but now leaves the problems in the hands
-of the user, allowing node to give more clear insight to your modules by
+of the user, allowing Node to give more clear insight to your modules by
 reducing complexity.
 
 Given:
@@ -310,42 +404,37 @@ Transform to:
 
 And nest as many times as needed.
 
-#### Errors
+#### 5.2.2. Errors from new path behavior.
 
-In the case that an `import` statement is unable to find a module, node should
+In the case that an `import` statement is unable to find a module, Node should
 make a **best effort** to see if `require` would have found the module and
 print out where it was found, if `NODE_PATH` was used, if `HOME` was used, etc.
 
-#### Vendored modules
+#### 5.2.3. Shipping both ES and CJS
 
-This will mean vendored modules are not included in the search path since
-`package.json` is not searched for outside of `node_modules`. Please use
-[bundledDependencies](https://docs.npmjs.com/files/package.json#bundleddependencies)
-to vendor your dependencies instead.
+When a `package.json` main is encountered, file extension searches are used to
+provide a means to ship both ES and CJS variants of packages. If we have two
+entry points `index.mjs` and `index.js` setting `"main":"./index"` in
+`package.json` will make Node pick up either, depending on what is supported.
 
-#### Shipping both ES and CJS
-
-Since `node_modules` continues to use searching, when a `package.json` main is
-encountered we are still able to perform file extension searches. If we have 2
-entry points `index.mjs` and `index.js` by setting `main:"./index"` we can let
-Node pick up either, depending on what is supported, without manually needing to
-manage multiple entry points separately.
-
-##### Excluding main
+##### 5.2.3.1. Excluding main
 
 Since `main` in `package.json` is entirely optional even inside of npm
 packages, some people may prefer to exclude main entirely in the case of using
-`./index` as that is still in the node module search algorithm.
+`./index` as that is still in the Node module search algorithm.
 
-### `this` in ES modules
+### 5.3. `this` in ES modules
 
-Unlike CJS, ES modules will have a `this` value set to the global scope. This
-is a breaking change, CJS modules have a this value set to their `module`
+ES modules will have a `this` value set to the global scope. This
+is a breaking change. CJS modules have a `this` value set to their `module`
 binding.
 
-### ES consuming CommonJS
+See ECMA262's [ModuleEvaluation]
+(https://tc39.github.io/ecma262/#sec-moduleevaluation) for this semantic.
 
-#### default imports
+### 5.4. ES consuming CommonJS
+
+####5.4.1. default imports
 
 `module.exports` is a single value. As such it does not have the dictionary
 like properties of ES module exports. In order to facilitate named imports for
@@ -353,7 +442,7 @@ ES modules, all properties of `module.exports` will be hoisted to named exports
 after evaluation of CJS modules with the exception of `default` which will
 point to `module.exports` directly.
 
-##### Examples
+##### 5.4.1.1. Examples
 
 Given:
 
@@ -451,18 +540,14 @@ bar.default.then(console.log); // outputs 3
 bar.then(console.log); // throws, bar is not a Promise
 ```
 
-### CommonJS consuming ES
+### 5.5. CommonJS consuming ES
 
-#### default exports
+#### 5.5.1. default exports
 
-ES modules only ever declare named exports. A default export just exports a
-property named `default`. `require` will not automatically wrap ES modules in a
-`Promise`. In the future if top level `await` becomes spec, you can use the
-`System.loader.import` function to wrap modules and wait on them (top level
-await can cause deadlock with circular dependencies, node should discourage its
-use).
+ES modules only export named values. A "default" export is an export that uses
+the property named `default`.
 
-##### Examples
+##### 5.5.1.1. Examples
 
 Given:
 
@@ -511,14 +596,14 @@ const es_namespace = require('./es');
 // }
 ```
 
-### Known Gotchas
+### 5.6. Known Gotchas
 
 All of these gotchas relate to opt-in semantics and the fact that CommonJS is a
 dynamic loader while ES is a static loader.
 
 No existing code will be affected.
 
-#### ES exports are read only
+#### 5.6.1. ES exports are read only
 
 The objects create by an ES module are [ModuleNamespace Objects][5].
 
@@ -526,9 +611,9 @@ These have `[[Set]]` be a no-op and are read only views of the exports of an ES
 module. Attempting to reassign any named export will not work, but assigning to
 the properties of the exports follows normal rules.
 
-### CJS exports allow mutation
+### 5.7. CJS modules allow mutation of imported modules
 
-Unlike ES modules, CJS modules have allowed mutation. When ES modules are
+CJS modules have allowed mutation on imported modules. When ES modules are
 integrating against CJS systems like Grunt, it may be necessary to mutate a
 `module.exports`.
 
@@ -551,7 +636,7 @@ import grunt_default from 'grunt';
 Grabs the `default` which is exactly what `module.exports` is, and all the
 properties will be mutable.
 
-#### ES will not honor reassigning `module.exports` after evaluation
+#### 5.7.1. ES will not honor reassigning `module.exports` after evaluation
 
 Since we need a consistent time to snapshot the `module.exports` of a CJS
 module. We will execute it immediately after evaluation. Code such as:
@@ -565,7 +650,7 @@ setTimeout(_ => module.exports = null);
 Will not see `module.exports` change to `null`. All ES module `import`s of the
 module will always see `123`.
 
-#### ES export list for CJS are snapshot immediately after execution.
+#### 5.7.2. ES export list for CJS are snapshot immediately after execution.
 
 Since `module.exports` is snapshot immediately after execution, that is the
 point when hoisting of properties occurs, adding and removing properties later
@@ -595,7 +680,7 @@ cjs_exports.yo = 'lo again';
 console.log(namespace.yo); // 'yolo again'
 ```
 
-#### Circular Dep CJS => ES => CJS Causes Throw
+#### 5.7.3. Circular Dep CJS => ES => CJS Causes Throw
 
 Due to the following explanation we want to avoid a very specific problem.
 Given:
@@ -633,105 +718,7 @@ import * as ns from './cjs.js';
 // throw new EvalError('./cjs is not an ES module and has not finished evaluation');
 ```
 
-## Advisory
-
-V8 currently does not expose the proper APIs for creating Loaders, it has done
-the brunt of the work by [exposing a parser in their issue tracker].
-
-It has been recommended that we list a potential API we could consume in order
-to create our loader. These extensions are listed below.
-
-### API Suggestion
-
-```cpp
-namespace v8;
-
-class Module {
-  // return a ModuleNamespace view of this Module's exports
-  ModuleNamespace Namespace();
-}
-
-class SourceTextModule : Script, Module {
-  // get a list of imports we need to perform prior to evaluation
-  ImportEntry[] ImportEntries();
-
-  // get a list of what this exports
-  ExportEntry[] ExportEntries();
-
-  // can be called prior to Run(), but all entries will have values of undefined
-  ModuleNamespace Namespace();
-
-  // required prior to Run()
-  //
-  // this will add the bindings to the lexical environment of
-  // the Module
-  ModuleDeclarationInstantiation(ImportBinding[] bindings);
-}
-
-class DynamicModule : Module {
-  // in order for CommonJS modules to create fully formed
-  // ES Module compatibility we need to hook up a static
-  // View of an Object to set as our exports
-  //
-  // think of this as calling ImportDeclarationInstantiation using the current
-  // properties of an object, enumerable or not.
-  //
-  // exports are never added or removed from the Module even
-  // though the exports object may do so, unlike `with()`
-  //
-  // construction via this will act as if it has already been
-  // run() and fill out the Namespace()
-  // this in a way mimics:
-  //   1. calling ModuleNamespaceCreate(this, exports)
-  //   2. populating the [[Namespace]] field of this Module Record
-  //
-  // see JS implementation below for approximate behavior
-  DynamicModule(Object exports);
-}
-
-class ImportEntry {
-  String ModuleRequest();
-
-  // note: if ImportName() is "*", the Loader
-  // must take the Namespace() and not directly the module
-  // as required by ECMA262
-  String ImportName();
-
-  String LocalName();
-}
-class ImportBinding {
-  ImportBinding(String importLocalName, Module delegate, String delegateExportName);
-}
-```
-
-```javascript
-// JS implementation of DynamicModule
-function DynamicModule(obj) {
-  let module_namespace = Object.create(null);
-  function gatherExports(obj, acc = new Set()) {
-      if (typeof obj !== 'object' && typeof obj !== 'function' || obj === null) {
-          return acc;
-      }
-      for (const key of Object.getOwnPropertyNames(obj)) {
-          const desc = Object.getOwnPropertyDescriptor(obj, key);
-          acc.add({key,desc});
-      }
-      return gatherExports(Object.getPrototypeOf(obj), acc);
-  }
-  [...gatherExports(obj)].forEach(({key,desc}) => {
-      if (key === 'default') return;
-      Object.defineProperty(module_namespace, key, {
-          get: () => obj[key],
-          set() {throw new Error(`ModuleNamespace key ${key} is read only.`)},
-          configurable: false,
-          enumerable: Boolean(desc.enumerable)
-      });
-  });
-  return Object.freeze(module_namespace);
-}
-```
-
-## Example Implementation
+## 6. Example Implementations
 
 These are written with the expectation that:
 
@@ -742,9 +729,9 @@ These are written with the expectation that:
 The variable names should be hidden from user code using various techniques
 left out here.
 
-### CJS Modules
+### 6.1. CJS Modules
 
-#### Pre Evaluation
+#### 6.1.1. Pre Evaluation
 
 ```javascript
 // for posterity, will still throw on circular deps
@@ -753,75 +740,50 @@ ModuleRegistry.set(__filename, new ModuleStatus({
 }));
 ```
 
-#### Immediately Post Evaluation
+#### 6.1.2. Immediately Post Evaluation
 
-##### On Error
+##### 6.1.2.1. On Error
 
 ```javascript
 ModuleRegistry.delete(__filename);
 ```
 
-##### On Normal Completion
+##### 6.1.2.2. On Normal Completion
 
 ```javascript
-let module_namespace = Object.create(module.exports);
-Object.defineProperty(module_namespace, 'default', {
-    value: module.exports,
-    writable: false,
-    configurable: false
-});
+let module_namespace = module.exports;
 ModuleRegistry.set(__filename, new ModuleStatus({
-    'ready': {'[[Result]]':v8.module.DynamicModule(module_namespace)};
+    'ready': {'[[Result]]':DynamicModuleCreate(module_namespace)[[Namespace]]};
 }));
 ```
 
-### ES Modules
+### 6.2. ES Modules
 
-#### Post Parsing
+#### 6.2.1. Post Parsing
 
 ```javascript
 Object.defineProperty(module, 'exports', {
-  get() {return v8.Module.Namespace(module)};
+  get() {return module[[Namespace]]};
   set(v) {throw new Error(`${__filename} is an ES module and cannot assign to module.exports`)}
   configurable: false,
   enumerable: false
 });
 ```
 
-Parsing occurs prior to evaluation, and CJS may execute once we start to resolve `import`.
+Parsing occurs prior to evaluation, and CJS may execute once we start to
+resolve `import`.
 
-#### Header
+#### 6.2.2. Header
 
 ```javascript
 // we will intercept this to inject the values
-import {__filename,__dirname,require,module,exports} from 'CURRENT__FILENAME';
-// to prevent global problems, and false sense of writable exports object:
-// exports = undefined
+import {__filename,__dirname,require,module,exports} from '';
 ```
 
-#### Immediately Post Evaluation
+#### 6.2.3. Immediately Post Evaluation
 
-##### On Error
+##### 6.2.3.1. On Error
 
 ```javascript
 delete require.cache[__filename];
 ```
-
-
-[1]: https://tc39.github.io/ecma262/#sec-source-text-module-records
-[2]: https://whatwg.github.io/loader/#registry "Registry Objects"
-[3]: https://github.com/tc39/ecma262/issues/322 "Add application/javascript+module mime to remove ambiguity"
-[4]: https://developer.mozilla.org/en-US/docs/Mozilla/JavaScript_code_modules/Services.jsm "Services.jsm"
-[5]: https://tc39.github.io/ecma262/#sec-module-namespace-exotic-objects "Module Namespace Exotic Objects"
-
-[ModuleRecord]: https://tc39.github.io/ecma262/#sec-abstract-module-records "Abstract Module Records"
-[ImportEntry]: https://tc39.github.io/ecma262/#table-39 "ImportEntry Record Fields"
-[ExportEntry]: https://tc39.github.io/ecma262/#table-41 "ExportEntry Record Fields"
-[ParseModule]: https://tc39.github.io/ecma262/#sec-parsemodule "ParseModule"
-[HostResolveImportedModule]: https://tc39.github.io/ecma262/#sec-hostresolveimportedmodule "Runtime Semantics: HostResolveImportedModule"
-[CreateImportBinding]: https://tc39.github.io/ecma262/#sec-createimportbinding "CreateImportBinding"
-[ModuleNamespaceCreate]: https://tc39.github.io/ecma262/#sec-modulenamespacecreate "ModuleNamespaceCreate"
-[ModuleDeclarationInstantiation]: https://tc39.github.io/ecma262/#sec-moduledeclarationinstantiation "ModuleDeclarationInstantiation() Concrete Method"
-[test runners providing browser test viewers]: https://mochajs.org/#running-mocha-in-the-browser "Running Mocha in the Browser"
-[exposing a parser in their issue tracker]: https://bugs.chromium.org/p/v8/issues/detail?id=1569 "Implement Harmony Modules"
-[privileges over the `file://` protocol]: https://developer.mozilla.org/en-US/docs/Mozilla/JavaScript_code_modules/Using#The_URL_for_a_code_module "The URL for a code module"
