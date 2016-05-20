@@ -136,7 +136,7 @@ following steps are taken:
 7. Let `value` be ! `O`.`[[Get]]`(`P`,` O`)
 8. Return `value`
 
-#### 3.2.2. `DelegatedModuleNamespaceObjectCreate(module,O)`
+#### 3.2.2. `DelegatedModuleNamespaceObjectCreate(module, O)`
 
 The abstract operation DelegatedModuleNamespaceObjectCreate with arguments `O` 
 is used to create a DelegatedModuleNamespaceObject. It performs the following 
