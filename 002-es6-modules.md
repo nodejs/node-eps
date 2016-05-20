@@ -102,11 +102,12 @@ steps:
 2. Set M's essential internal methods to the definitions specified in 
    [15.2.1.15 Abstract Module Records]
    (https://tc39.github.io/ecma262/#sec-abstract-module-records)
-3. Set M's [[Namespace]] internal slot to DelegatedModuleNamespaceObjectCreate
+3. Set M's [[Realm]] internal slot to the current Realm Record.
+4. Set M's [[Namespace]] internal slot to DelegatedModuleNamespaceObjectCreate
    (`M`, `O`)
-4. Set M's [[Environment]] internal slot to NewObjectEnvironment(`M`.[[Namespace]], **null**)
-5. Set M's [[Evaluated]] internal slot to **true**
-6. Return M
+5. Set M's [[Environment]] internal slot to NewObjectEnvironment(`M`.[[Namespace]], **null**)
+6. Set M's [[Evaluated]] internal slot to **true**
+7. Return M
 
 ### 3.2. **DelegatedModuleNamespaceObject**
 
