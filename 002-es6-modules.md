@@ -104,8 +104,9 @@ steps:
    (https://tc39.github.io/ecma262/#sec-abstract-module-records)
 3. Set M's [[Namespace]] internal slot to DelegatedModuleNamespaceObjectCreate
    (`M`, `O`)
-4. Set M's [[Evaluated]] internal slot to **true**
-5. Return M
+4. Set M's [[Environment]] internal slot to NewObjectEnvironment(`M`.[[Namespace]], **null**)
+5. Set M's [[Evaluated]] internal slot to **true**
+6. Return M
 
 ### 3.2. **DelegatedModuleNamespaceObject**
 
