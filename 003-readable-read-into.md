@@ -12,14 +12,14 @@ It is proposed to add `readInto` method and configuration option to the
 
 ```js
 const stream = new stream.Readable({
-  readInto: (buf, offset, length, callback) => {
+  readInto(buf, offset, length, callback) {
   }
 });
 
 // Asynchronously read data into `buf.slice(offset, offset + length)`
-// Invoke continuation with either error (`err`) or number of bytes
-// read (`length`)
-stream.readInto(buf, offset, length, (err, length) => {
+// Invoke continuation with either error (`err`), or original buffer (`buf`),
+// original offset (`off`), and number of bytes read (`bytesRead`)
+stream.readInto(buf, offset, length, (err, buf, offset, bytesRead) => {
   // ...
 });
 ```
@@ -93,7 +93,7 @@ Readable.prototype.readInto = function readInto(buf, off, len, cb) {
     if (item)
       item();
 
-    cb(err, size);
+    cb(err, buf, off, size);
   });
 }
 ```
