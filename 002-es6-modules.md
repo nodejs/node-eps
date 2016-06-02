@@ -425,12 +425,13 @@ packages, some people may prefer to exclude main entirely in the case of using
 
 ### 5.3. `this` in ES modules
 
-ES modules will have a `this` value set to the global scope. This
+ES modules will have a `this` value set to `undefined`. This
 is a breaking change. CJS modules have a `this` value set to their `module`
 binding.
 
-See ECMA262's [ModuleEvaluation]
-(https://tc39.github.io/ecma262/#sec-moduleevaluation) for this semantic.
+See ECMA262's [Module Environment Record](
+https://tc39.github.io/ecma262/#sec-module-environment-records-getthisbinding
+) for this semantic.
 
 ### 5.4. ES consuming CommonJS
 
