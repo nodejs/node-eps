@@ -42,6 +42,12 @@ envision how it will be used in Node.js addons. Even core modules will no longer
 be required to be distributed with core, since they could be built without core
 dependencies.
 
+Additionally, with the `uv_link_observer_t` (which is a part of [`uv_link_t`][0]
+distribution), all of the reads that right now happen internally within the
+`StreamBase` will be **observable**. This means that JavaScript user code will
+still be able to listen for `data` events on the `net.Socket` that was consumed
+by some `uv_link_t` stream.
+
 ## 4. Proof-of-Concept
 
 Several modules were created as a Proof-of-Concept [`uv_link_t`][0]
