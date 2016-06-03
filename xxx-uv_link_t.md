@@ -13,7 +13,7 @@ classes that inherit from `StreamBase`.
 
 The fast HTTP and TLS protocol implementation in Node core depends on so called
 `StreamBase` C++ class. This class is an analog of JavaScript streams in C++.
-The main ideas behind `StreamBase` is to:
+The main ideas behind `StreamBase` are to:
 
 1. Avoid unnecessary memory allocations by reading data directly into buffer
    from which it will be synchronously parsed
@@ -28,12 +28,12 @@ From [`uv_link_t`][0] readme:
 
     Chainable libuv streams.
 
-    It is quite easy to write a TCP server/client in [libuv][0]. Writing HTTP
+    It is quite easy to write a TCP server/client in [libuv][1]. Writing HTTP
     server/client is a bit harder. Writing HTTP server/client on top of TLS
     server could be unwieldy.
 
     `uv_link_t` aims to solve complexity problem that quickly escalates once
-    using multiple layers of protocols in [libuv][0] by providing a way to
+    using multiple layers of protocols in [libuv][1] by providing a way to
     implement protocols separately and chain them together in easy and
     high-performant way using very narrow interfaces.
 
@@ -57,8 +57,8 @@ They can be combined together quite trivially as demonstrated in
 
 Another abstraction level could be added for multiplexing [`uv_link_t`][0]s to
 provide a common C interface for http2 and http1.1. This will help us bring
-a http2 implementation into the core while reusing as much of the existing code
-as possible.
+a http2 implementation into the core while reusing as much as possible of the
+existing code.
 
 [0]: https://github.com/indutny/uv_link_t
 [1]: https://github.com/libuv/libuv
