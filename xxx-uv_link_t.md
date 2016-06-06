@@ -12,7 +12,8 @@ classes that inherit from `StreamBase`.
 ## 2. Current state of C++ Streams in Node
 
 The fast HTTP and TLS protocol implementation in Node core depends on so called
-`StreamBase` C++ class. This class is an analog of JavaScript streams in C++.
+`StreamBase` C++ class and auxiliary `StreamReq` and `StreamResources` classes.
+This class is an analog of JavaScript streams in C++.
 The main ideas behind `StreamBase` are to:
 
 1. Avoid unnecessary memory allocations by reading data directly into buffer
@@ -34,7 +35,7 @@ From [`uv_link_t`][0] readme:
 
     `uv_link_t` aims to solve complexity problem that quickly escalates once
     using multiple layers of protocols in [libuv][1] by providing a way to
-    implement protocols separately and chain them together in easy and
+    implement protocols separately and chain them together in an easy and
     high-performant way using very narrow interfaces.
 
 Given that [`uv_link_t`][0] depends only on [libuv][1], it is very easy to
