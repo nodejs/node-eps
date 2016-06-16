@@ -48,6 +48,86 @@ distribution), all of the reads that right now happen internally within the
 still be able to listen for `data` events on the `net.Socket` that was consumed
 by some `uv_link_t` stream.
 
+## 3.1. uv_link_t technical description
+
+_(NOTE: chain is built from links)_
+
+_(NOTE: many of these API methods have return values, check them!)_
+
+First, a `uv_stream_t*` instance needs to be picked. It will act as a source
+link in a chain:
+```c
+uv_stream_t* stream = ...;
+
+uv_link_source_t source;
+
+uv_link_source_init(uv_default_loop(), &source, stream);
+```
+
+A chain can be formed with `&source` and any other `uv_link_t` instance:
+```c
+uv_link_t link;
+
+static uv_link_methods_t methods = {
+  .read_start = read_start_impl,
+  .read_stop = read_stop_impl,
+  .write = write_impl,
+  .try_write = try_write_impl,
+  .shutdown = shutdown_impl,
+  .close = close_impl,
+
+  /* These will be used only when chaining two links together */
+
+  .alloc_cb_override = alloc_cb_impl,
+  .read_cb_override = read_cb_impl
+};
+
+uv_link_init(&link, &methods);
+
+/* Just like in libuv */
+link.alloc_cb = my_alloc_cb;
+link.read_cb = my_read_cb;
+
+/* Creating a chain here */
+uv_link_chain(&source, &link);
+
+uv_link_read_start(&link);
+```
+
+Now comes a funny part, any of these method implementations may hook up into
+the parent link in a chain to perform their actions:
+
+```c
+static int shutdown_impl(uv_link_t* link,
+                         uv_link_t* source,
+                         uv_link_shutdown_cb cb,
+                         void* arg) {
+  fprintf(stderr, "this will be printed\n");
+  return uv_link_propagate_shutdown(link->parent, source, cb, arg);
+}
+```
+
+## 3.2. How things are going to be hooked up into the core
+
+TCP sockets, IPC pipes, and possibly TTYs will be a base elements of every
+chain, backed up by the `uv_link_source_t`.
+
+HTTP, TLS, WebSockets(?) will be custom `uv_link_methods_t`, so that the links
+could be created for them and chained together with the `uv_link_source_t`.
+
+The chaining process will happen in JavaScript through the method that will
+take `v8:External` from the both `uv_link_t` instances, and run `uv_link_chain`
+on them.
+
+User `uv_link_methods_t` implementations will work in pretty much the same way,
+bringing consistency to the C++ streams implementation.
+
+## 3.3. Observability
+
+`uv_link_observer_t` may be inserted between any two `uv_link_t`s to observe
+the incoming data that flows between them. This is a huge difference for TLS,
+where right now it is not possible to read any raw incoming bytes.
+
 ## 4. Proof-of-Concept
 
 Several modules were created as a Proof-of-Concept [`uv_link_t`][0]
