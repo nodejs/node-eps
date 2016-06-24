@@ -140,8 +140,8 @@ following steps are taken:
 
 #### 3.2.2. `DelegatedModuleNamespaceObjectCreate(module, O)`
 
-The abstract operation DelegatedModuleNamespaceObjectCreate with arguments `O`
-is used to create a DelegatedModuleNamespaceObject. It performs the following
+The abstract operation `DelegatedModuleNamespaceObjectCreate` with arguments `O`
+is used to create a `DelegatedModuleNamespaceObject`. It performs the following
 steps:
 
 1. Assert: `module` is a Module Record.
@@ -172,7 +172,7 @@ steps:
 
 ### 4.1. NodeModuleEvaluationJob(source, mode)
 
-The abstractjob operation NodeModuleEvaluationJob with parameters `source` and
+The abstractjob operation `NodeModuleEvaluationJob` with parameters `source` and
 `mode`. The results of this should be placed in the cache that
 `HostResolveImportedModule` uses.
 
@@ -193,110 +193,79 @@ The abstractjob operation NodeModuleEvaluationJob with parameters `source` and
 
 **NOTE:** This still guarantees:
 
-* that ES module dependencies are all executed prior to the module itself
+* ES module dependencies are all executed prior to the module itself
 * CJS modules have a full shape prior to being handed to ES modules
-* allows CJS modules to imperatively start the loading of other modules,
-  including ES modules
+* CJS modules can imperatively start loading other modules, including ES modules
 
 ## 5. Semantics
 
 ### 5.1. Determining if source is an ES Module
 
-A new file type will be recognised, `.mjs` as ES modules. `.mjs` files will be
-treated as having different loading semantics that are compatible with the
-existing CJS system, just like `.node`, `.json`, or usage of
-`require.extension` (even though deprecated) are compatible. This file type
-will be registered with IANA as an official file type, see [TC39 issue]
-(https://github.com/tc39/ecma262/issues/322).
+Require that Module source text has at least one `import` or `export` declaration.
+A module with only an `import` declaration and no `export` declaration is valid.
+Modules, that do not export anything, should specify an `export {}` to make
+intentions clear and avoid accidental parse errors while removing `import`
+declarations. The `export {}` is **not** new syntax and does **not** export an
+empty object. It is simply the standard way to specify exporting nothing.
 
-The `.mjs` file extension will have a higher loading priority than `.js` for
-`require`. This means that, once the Node resolution algorithm reaches file
-expansion, the path for `path + '.mjs'` would be attempted prior to `path +
-'.js'` when performing `require(path)`.
+A package opts-in to the Module goal by specifying `"module"` as the parse goal
+field *(name not final)* in its `package.json`. Package dependencies are not
+affected by the opt-in and may be a mix of CJS and ES module packages. If a parse
+goal is not specified, then attempt to parse source text as the preferred goal
+*(Script for now since most modules are CJS)*. If there is a parse error that
+may allow another goal to parse, then parse as the other goal, and so on. After
+this, the goal is known unambiguously and the environment can safely perform
+initialization without the possibility of the source text being run in the wrong
+goal.
 
-#### 5.1.1 Reason for decision
+<em>Note: While the ES2015 specification
+[does not forbid](http://www.ecma-international.org/ecma-262/6.0/#sec-forbidden-extensions)
+this extension, Node wants to avoid acting as a rogue agent. Node has a TC39
+representative, [@bmeck](https://github.com/bmeck), to champion this proposal.
+A specification change or at least an official endorsement of this Node proposal
+would be welcomed. If a resolution is not possible, this proposal will fallback
+to the previous [`.mjs` file extension proposal](https://github.com/nodejs/node-eps/blob/5dae5a537c2d56fbaf23aaf2ae9da15e74474021/002-es6-modules.md#51-determining-if-source-is-an-es-module).</em>
 
-The choice of `.mjs` was made due to a number of factors.
+#### 5.1.1 Goal Detection
 
-* `.jsm`
-    * conflict with Firefox, which includes escalated
-      [privileges over the `file://` protocol] that can access
-      [sensistive information][4]. This could affect things like
-      [test runners providing browser test viewers]
-    * [decent usage on npm]
-      (https://gist.github.com/ChALkeR/9e1fb15d0a0e18589e6dadc34b80875d)
-* `.es`
-    * lacks conflicts with other major software
-    * removes the JS moniker/signifier in many projects such as Node.js,
-      Cylon.js, Three.js, DynJS, JSX, ...
-    * removes JavaScript -> JS acronym association for learning
-    * is an existing TLD, could be place for squatting / confusion.
-    * [small usage on npm](https://gist.github.com/ChALkeR/261550d903ec9867bbab)
-* `.m.js`
-    * potential conflict with existing software targeting wrong goal
-    * allows `*.js` style globbing to work still
-    * toolchain problems for asset pipelines/Node/editors that only check after
-      last `.`
-    * [small usage on npm](https://gist.github.com/ChALkeR/c10642f2531b1be36e5d)
-* `.mjs`
-    * lacks conflicts with other major software, conflicts with
-      [metascript](https://github.com/metascript/metascript) but that was last
-      published in 2015
-    * [small usage on npm]
-      (https://gist.github.com/bmeck/07a5beb6541c884acbe908df7b28df3f)
+##### Parse (source, goal, throws)
 
+  The abstract operation to parse source text as a given goal.
 
-#### 5.1.1.1 Inter package loading using file extension  breakage.
+  1. Bootstrap `source` for `goal`.
+  2. Parse `source` as `goal`.
+  3. If success, return `true`.
+  4. If `throws`, throw exception.
+  5. Return `false`.
 
-There is knowledge of breakage for code that *upgrades* inner package
-dependencies such as `require('foo/bar.js')`. As `bar.js` may move to
-`bar.mjs`. Since `bar.js` is not the listed entry point this was considered
-okay. If foo was providing this file explicitly like `lodash` has this can be
-mitigated easily by using as proxy module should `foo` choose to provide one:
+##### Operation
 
-```js
-Object.defineProperty(module, 'exports', {
-  get() {
-    return require(__filename.replace(/\.js$/,'.mjs'))
-  },
-  configurable:false
-});
-Object.freeze(module);
-```
+1. If a package parse goal is specified, then
+  1. Let `goal` be the resolved parse goal.
+  2. Call `Parse(source, goal, true)` and return.
 
-It is recommended going forward that developers not rely on the file extensions
-in packages they do not control.
+2. Else fallback to multiple parse.
+  1. If `Parse(Source, Script, false)` is `true`, then
+    1. Return.
+  2. Else
+    1. Call `Parse(Source, Module, true)`.
 
-### 5.1.2. Ecosystem Concerns
+  *Note: A host can choose either goal to parse first and may change their order
+  over time or as new parse goals are introduced. Feel free to swap the order of
+  Script and Module.*
 
-Concerns of ecosystem damage when using a new file extension were considered as
-well. Firewall rules and server scripts using `*.js` as the detection mechanism
-for JavaScript would be affected by our change, largely just affecting
-browsers. However, new file extensions and mimes continue to be introduced and
-supported by such things. If a front-end is unable to make such a change, using
-a rewrite rule from `.mjs` to `.js` should sufficiently mitigate this.
+#### 5.1.2 Implementation
 
-There were proposals of using `package.json` as an out of band configuration as
-well.
+To improve performance, host environments may want to specify a goal to parse
+first. This can be done in several ways:<br>
+cache on disk, a command line flag, a manifest file, HTTP header, file extension, etc.
 
-* removes one-off file execution for quick scripting like using `.save` in the
-  repl then running.
-* causes editors/asset pipelines to have knowledge of this. most work solely on
-  file extension and it would be prohibitive to change.
-    * HTTP/2 PUSH solutions would also need this and would be affected
-* no direction for complete removal of CJS. A file extension leads to a world
-  without `.js` and only `.mjs` files. This would be a permanent field in
-  `package.json`
-* per file mode requirements mean using globs or large lists
-    * discussion of allowing only one mode per package was a non-starter for
-      migration path issues
-* `package.json` is not required in `node_modules/` and raw files can live in
-  `node_modules/`
-    * e.g. `node_modules/foo/index.js`
-    * e.g. `node_modules/foo.js`
-* complex abstraction to handle symlinks used by tools like
-  [link-local](https://github.com/timoxley/linklocal)
-    * e.g. `node_modules/foo -> ../app/components/foo.js`
+#### 5.1.3 Tooling Concerns
+
+Some tools, outside of Node, may not have access to a JS parser *(Bash programs,
+some asset pipelines, etc.)*. These tools generally operate on files as opaque
+blobs / plain text files and can use the techniques, listed under
+[Implementation](#512-implementation), to get parse goal information.
 
 ### 5.2. ES Import Path Resolution
 
@@ -308,10 +277,8 @@ In summary:
 
 ```javascript
 // looks at
-//   ./foo.mjs
 //   ./foo.js
 //   ./foo/package.json
-//   ./foo/index.mjs
 //   ./foo/index.js
 //   etc.
 import './foo';
@@ -319,10 +286,8 @@ import './foo';
 
 ```javascript
 // looks at
-//   /bar.mjs
 //   /bar.js
 //   /bar/package.json
-//   /bar/index.mjs
 //   /bar/index.js
 //   etc.
 import '/bar';
@@ -330,16 +295,12 @@ import '/bar';
 
 ```javascript
 // looks at:
-//   ./node_modules/baz.mjs
 //   ./node_modules/baz.js
 //   ./node_modules/baz/package.json
-//   ./node_modules/baz/index.mjs
 //   ./node_modules/baz/index.js
 // and parent node_modules:
-//   ../node_modules/baz.mjs
 //   ../node_modules/baz.js
 //   ../node_modules/baz/package.json
-//   ../node_modules/baz/index.mjs
 //   ../node_modules/baz/index.js
 //   etc.
 import 'baz';
@@ -347,16 +308,12 @@ import 'baz';
 
 ```javascript
 // looks at:
-//   ./node_modules/abc/123.mjs
 //   ./node_modules/abc/123.js
 //   ./node_modules/abc/123/package.json
-//   ./node_modules/abc/123/index.mjs
 //   ./node_modules/abc/123/index.js
 // and parent node_modules:
-//   ../node_modules/abc/123.mjs
 //   ../node_modules/abc/123.js
 //   ../node_modules/abc/123/package.json
-//   ../node_modules/abc/123/index.mjs
 //   ../node_modules/abc/123/index.js
 //   etc.
 import 'abc/123';
@@ -408,19 +365,6 @@ In the case that an `import` statement is unable to find a module, Node should
 make a **best effort** to see if `require` would have found the module and
 print out where it was found, if `NODE_PATH` was used, if `HOME` was used, etc.
 
-#### 5.2.3. Shipping both ES and CJS
-
-When a `package.json` main is encountered, file extension searches are used to
-provide a means to ship both ES and CJS variants of packages. If we have two
-entry points `index.mjs` and `index.js` setting `"main":"./index"` in
-`package.json` will make Node pick up either, depending on what is supported.
-
-##### 5.2.3.1. Excluding main
-
-Since `main` in `package.json` is entirely optional even inside of npm
-packages, some people may prefer to exclude main entirely in the case of using
-`./index` as that is still in the Node module search algorithm.
-
 ### 5.3. `this` in ES modules
 
 ES modules will have a `this` value set to `undefined`. This
@@ -456,7 +400,7 @@ module.exports = {
 You will grab `module.exports` when performing an ES import.
 
 ```javascript
-// es.mjs
+// es.js
 
 // grabs the namespace
 import * as baz from './cjs.js';
@@ -486,7 +430,7 @@ module.exports = null;
 You will grab `module.exports` when performing an ES import.
 
 ```javascript
-// es.mjs
+// es.js
 import foo from './cjs.js';
 // foo = null;
 
@@ -508,7 +452,7 @@ module.exports = function two() {
 You will grab `module.exports` when performing an ES import.
 
 ```javascript
-// es.mjs
+// es.js
 import foo from './cjs.js';
 foo(); // 2
 
@@ -530,7 +474,7 @@ module.exports = Promise.resolve(3);
 You will grab `module.exports` when performing an ES import.
 
 ```javascript
-// es.mjs
+// es.js
 import foo from './cjs.js';
 foo.then(console.log); // outputs 3
 
@@ -551,7 +495,7 @@ the property named `default`.
 Given:
 
 ```javascript
-// es.mjs
+// es.js
 let foo = {bar:'my-default'};
 // note:
 //   this is a value
@@ -577,7 +521,7 @@ console.log(es_namespace.default);
 Given:
 
 ```javascript
-// es.mjs
+// es.js
 export let foo = {bar:'my-default'};
 export {foo as bar};
 export function f() {};
@@ -691,7 +635,7 @@ require('./es');
 ```
 
 ```javascript
-// es.mjs
+// es.js
 import * as ns from './cjs.js';
 // ns = ?
 import cjs from './cjs.js';
@@ -712,7 +656,7 @@ similar to how you cannot affect a generator while it is running.
 This would change the ES module behavior to:
 
 ```javascript
-// es.mjs
+// es.js
 import * as ns from './cjs.js';
 // throw new EvalError('./cjs is not an ES module and has not finished evaluation');
 ```
