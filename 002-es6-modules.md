@@ -548,7 +548,7 @@ No existing code will be affected.
 
 #### 5.6.1. ES exports are read only
 
-The objects create by an ES module are [ModuleNamespace Objects][5].
+The objects created by an ES module are [ModuleNamespace Objects][5].
 
 These have `[[Set]]` be a no-op and are read only views of the exports of an ES
 module. Attempting to reassign any named export will not work, but assigning to
