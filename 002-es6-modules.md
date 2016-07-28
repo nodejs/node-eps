@@ -548,11 +548,7 @@ No existing code will be affected.
 
 #### 5.6.1. ES exports are read only
 
-The objects created by an ES module are [ModuleNamespace Objects](https://tc39.github.io/ecma262/#sec-module-namespace-objects).
-
-These have `[[Set]]` be a no-op and are read only views of the exports of an ES
-module. Attempting to reassign any named export will not work, but assigning to
-the properties of the exports follows normal rules.
+When CommonJS consumes ES, `require()` returns a [ModuleNamespace Object](https://tc39.github.io/ecma262/#sec-module-namespace-objects). These have a no-op `[[Set]]` that makes them read only views of the exports of an ES module. Attempting to assign to any property of the Module Namespace Object will not work, but assignment to properties of exported objects follows normal rules.
 
 ### 5.7. CJS modules allow mutation of imported modules
 
