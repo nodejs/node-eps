@@ -37,7 +37,7 @@ related syntax, and introduces:
     - Defines the list of imports via `[[ImportEntry]]`.
     - Defines the list of exports via `[[ExportEntry]]`.
 
-* **[ModuleNamespace]
+* **[Module Namespace]
 (https://tc39.github.io/ecma262/#sec-module-namespace-objects)**
     - Represents a read-only static set of bindings to a module's exports.
 
@@ -111,7 +111,7 @@ steps:
 
 ### 3.2. **DelegatedModuleNamespaceObject**
 
-A `ModuleNamespaceObject` that performs delegation to an Object when accessing
+A Module Namespace Object that performs delegation to an Object when accessing
 properties. This is used for delegation behavior from CJS `module.exports` when
 imported by ES modules.
 
@@ -548,7 +548,7 @@ No existing code will be affected.
 
 #### 5.6.1. ES exports are read only
 
-When CommonJS consumes ES, `require()` returns a [ModuleNamespace Object](https://tc39.github.io/ecma262/#sec-module-namespace-objects). These have a no-op `[[Set]]` that makes them read only views of the exports of an ES module. Attempting to assign to any property of the Module Namespace Object will not work, but assignment to properties of exported objects follows normal rules. Example:
+When CommonJS consumes ES, `require()` returns a [Module Namespace Object](https://tc39.github.io/ecma262/#sec-module-namespace-objects). These have a no-op `[[Set]]` that makes them read only views of the exports of an ES module. Attempting to assign to any property of the Module Namespace Object will not work, but assignment to properties of exported objects follows normal rules. Example:
 
 ```javascript
 const es_namespace = require('./es');
@@ -671,7 +671,7 @@ import * as ns from './cjs.js';
 
 These are written with the expectation that:
 
-* ModuleNamespaces can be created from existing Objects.
+* Module Namespace Objects can be created from existing Objects.
 * WHATWG Loader spec Registry is available as a ModuleRegistry.
 * ModuleStatus Objects can be created.
 
