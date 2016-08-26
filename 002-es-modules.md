@@ -274,7 +274,8 @@ module.exports = {__dirname};
 
 ```js
 // use.mjs
-import {__dirname} from './expose.js';
+import expose from './expose.js';
+const {__dirname} = expose;
 ```
 
 #### 3.4.2. Timing
