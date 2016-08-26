@@ -261,7 +261,21 @@ ESM will not be bootstrapped with magic variables and will await upcoming specif
 | __filename | n | |
 | __dirname | n | |
 
-Since ESM are always strict, errors may be thrown upon trying to use variables that do not exist in ESM.
+Like normal scoping rules, if a variable does not exist in a scope, the outer scope is used to find the variable. Since ESM are always strict, errors may be thrown upon trying to use variables that do not exist globally when using ESM.
+
+##### 3.4.1.1. Workaround
+
+Although heavily advised against, you can have a NM module sibling for your ESM that can export these things:
+
+```js
+// expose.js
+module.exports = {__dirname};
+```
+
+```js
+// use.mjs
+import {__dirname} from './expose.js';
+```
 
 #### 3.4.2. Timing
 
@@ -440,7 +454,7 @@ const esm = require('./es');
 // esm ~= Promise => {
 //   default => result_from_evaluating_foo;
 // }
-es_namespace.then(
+esm.then(
   es_namespace => {
     console.log(es_namespace.default);
     // {bar='my-default'}
@@ -462,7 +476,7 @@ export class c {};
 
 ```javascript
 // NCJS.js
-const es_namespace = require('./es');
+const esm = require('./es');
 // esm ~= Promise => {
 //   foo=foo;
 //   bar=foo;
