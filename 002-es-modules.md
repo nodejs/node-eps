@@ -66,7 +66,7 @@ related syntax, and introduces:
 
 ### 3.1. Determining if source is an ES Module
 
-A new file type will be used for ES Modules, `.mjs`. Files with this extensions
+A new file type will be used for ES Modules, `.mjs`. Files with this extension
 will be treated using the loading semantics in this document, but retain a way
 to load existing extensions of `.json`, `.node`, and `.js`. The file type for
 JavaScript with IANA as an official file type needs to have this extensions
