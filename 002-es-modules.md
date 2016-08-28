@@ -2,7 +2,7 @@
 |--------|-----------------------------|
 | Author | @bmeck                      |
 | Status | DRAFT                       |
-| Date   | 2016-01-07                  |
+| Date   | 2016-08-26                  |
 
 **NOTE:** `DRAFT` status does not mean ESM will be implemented in Node
 core. Instead that this is the standard, should Node core decide to implement
