@@ -27,7 +27,7 @@ The intent of this standard is to:
 ## 2. Related
 
 
-[ECMA262](tc39.github.io/ecma262/) discusses the syntax and semantics of
+[ECMA262](https://tc39.github.io/ecma262/) discusses the syntax and semantics of
 related syntax, and introduces:
 
 ### 2.1. Types
