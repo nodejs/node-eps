@@ -189,14 +189,14 @@ interface Tracing {
 }
 ```
 
-### 2.4 Emit API overloads
+### 2.4 Event-type-specific emit APIs
 The `emit()` method defined above mostly follows the familiar `EventEmitter` pattern for emitting
-events as objects. However some additional overloads are proposed that take separate parameters
-instead of an event object. Using these overloads, the four emitted events in the previous code
-example can be rewritten more concisely:
+events as objects. However some alternative methods are proposed for each type of event, that take
+separate parameters instead of an event object. Using these methods, the four emitted events in the
+previous code example can be rewritten more concisely:
 
 ```javascript
-tracing.emit(category, 'myEvent');
+tracing.instant(category, 'myEvent');
 
 const scopeId = tracing.begin(category, 'myTask');
 tracing.end(category, 'myTask', scopeId);
@@ -204,15 +204,13 @@ tracing.end(category, 'myTask', scopeId);
 tracing.count(category, 'myCounter', 3);
 ```
 
-These overloads are slightly more efficient because they doesn't require creation of an object for
+These methods are slightly more efficient because they doesn't require creation of an object for
 the event. And for simple cases they are easier to write and read.
 
 ```typescript
 interface Tracing {
   /**
-   * Emits a tracing event of type "instant" using an event name and optional event args. For
-   * simple "instant" events, this is slightly more efficient than the other emit() overloads
-   * because it doesn't require creation of an object for the event.
+   * Emits a tracing event of type "instant" using an event name and optional event args.
    *
    * @param category Required tracing category name or array of one or more category names for
    *   the tracing event.
@@ -223,7 +221,7 @@ interface Tracing {
    * @returns True if the event was emitted; false if the event was not emitted because tracing
    *   was not enabled for any of the event categories.
    */
-  emit(
+  instant(
     category: string | string[],
     name: string,
     args?: { [name: string]: any } | () => { [name: string]: any }): boolean;
@@ -331,7 +329,7 @@ tracing.on(['example1', 'example2'] , e => { // e is a TracingEvent object
 tracing.emit(['example2', 'example3'], 'info', 'Hello tracing!');
 ```
 
-### 3.2 Listern API specification
+### 3.2 Listener API specification
 ```typescript
 interface Tracing extends CategoryEventEmitter ...
 
