@@ -37,7 +37,7 @@ related syntax, and introduces:
     - Defines the list of imports via `[[ImportEntry]]`.
     - Defines the list of exports via `[[ExportEntry]]`.
 
-* **[ModuleNamespace]
+* **[Module Namespace]
 (https://tc39.github.io/ecma262/#sec-module-namespace-objects)**
     - Represents a read-only static set of bindings to a module's exports.
 
@@ -111,7 +111,7 @@ steps:
 
 ### 3.2. **DelegatedModuleNamespaceObject**
 
-A `ModuleNamespaceObject` that performs delegation to an Object when accessing
+A Module Namespace Object that performs delegation to an Object when accessing
 properties. This is used for delegation behavior from CJS `module.exports` when
 imported by ES modules.
 
@@ -548,11 +548,17 @@ No existing code will be affected.
 
 #### 5.6.1. ES exports are read only
 
-The objects create by an ES module are [ModuleNamespace Objects][5].
+When CommonJS consumes ES, `require()` returns a [Module Namespace Object](https://tc39.github.io/ecma262/#sec-module-namespace-objects). These have a no-op `[[Set]]` that makes them read only views of the exports of an ES module. Attempting to assign to any property of the Module Namespace Object will not work, but assignment to properties of exported objects follows normal rules. Example:
 
-These have `[[Set]]` be a no-op and are read only views of the exports of an ES
-module. Attempting to reassign any named export will not work, but assigning to
-the properties of the exports follows normal rules.
+```javascript
+const es_namespace = require('./es');
+
+// Doesn't work:
+es_namespace.foo = {};
+
+// Normal rules:
+es_namespace.foo.bar = {};
+```
 
 ### 5.7. CJS modules allow mutation of imported modules
 
@@ -619,8 +625,8 @@ console.log(namespace.foo); // undefined
 
 // mutate to show 'yo' still exists as a binding
 import cjs_exports from './bad-cjs.js';
-cjs_exports.yo = 'lo again';
-console.log(namespace.yo); // 'yolo again'
+cjs_exports.yo += ' again';
+console.log(namespace.yo); // 'lo again'
 ```
 
 #### 5.7.3. Circular Dep CJS => ES => CJS Causes Throw
@@ -665,7 +671,7 @@ import * as ns from './cjs.js';
 
 These are written with the expectation that:
 
-* ModuleNamespaces can be created from existing Objects.
+* Module Namespace Objects can be created from existing Objects.
 * WHATWG Loader spec Registry is available as a ModuleRegistry.
 * ModuleStatus Objects can be created.
 
