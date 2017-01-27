@@ -457,8 +457,8 @@ import foo from './cjs.js';
 foo(); // 2
 
 import * as bar from './cjs.js';
-bar.name; // 'two'
 bar.default(); // 2
+bar.name; // undefined
 bar(); // throws, bar is not a function
 ```
 
