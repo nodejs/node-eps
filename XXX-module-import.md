@@ -23,9 +23,8 @@ represents how essential is this additional
 // one added method to Module.prototype
 module.constructor.prototype.import =
   function (path) {
-    return new Promise(
-      res => res(this.require(path))
-    );
+    return Promise.resolve()
+           .then(() => this.require(path));
   };
 ```
 
