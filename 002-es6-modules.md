@@ -620,7 +620,7 @@ console.log(namespace.foo); // undefined
 // mutate to show 'yo' still exists as a binding
 import cjs_exports from './bad-cjs.js';
 cjs_exports.yo = 'lo again';
-console.log(namespace.yo); // 'yolo again'
+console.log(namespace.yo); // 'lo again'
 ```
 
 #### 5.7.3. Circular Dep CJS => ES => CJS Causes Throw
