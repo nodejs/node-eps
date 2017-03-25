@@ -32,34 +32,28 @@ related syntax, and introduces:
 
 ### 2.1. Types
 
-* **[ModuleRecord]
-(https://tc39.github.io/ecma262/#sec-abstract-module-records)**
+* **[ModuleRecord](https://tc39.github.io/ecma262/#sec-abstract-module-records)**
     - Defines the list of imports via `[[ImportEntry]]`.
     - Defines the list of exports via `[[ExportEntry]]`.
 
-* **[ModuleNamespace]
-(https://tc39.github.io/ecma262/#sec-module-namespace-objects)**
+* **[ModuleNamespace](https://tc39.github.io/ecma262/#sec-module-namespace-objects)**
     - Represents a read-only static set of bindings to a module's exports.
 
 ### 2.2. Operations
 
 * **[ParseModule](https://tc39.github.io/ecma262/#sec-parsemodule)**
-    - Creates a [SourceTextModuleRecord]
-    (https://tc39.github.io/ecma262/#sec-source-text-module-records) from
+    - Creates a [SourceTextModuleRecord](https://tc39.github.io/ecma262/#sec-source-text-module-records) from
     source code.
 
-* **[HostResolveImportedModule]
-(https://tc39.github.io/ecma262/#sec-hostresolveimportedmodule)**
+* **[HostResolveImportedModule](https://tc39.github.io/ecma262/#sec-hostresolveimportedmodule)**
     - A hook for when an import is exactly performed. This returns a
       `ModuleRecord`. Used as a means to grab modules from Node's loader/cache.
 
-* **[CreateImportBinding]
-(https://tc39.github.io/ecma262/#sec-createimportbinding)**
+* **[CreateImportBinding](https://tc39.github.io/ecma262/#sec-createimportbinding)**
     - A means to create a shared binding (variable) from an export to an
       import. Required for the "live" binding of imports.
 
-* **[ModuleNamespaceCreate]
-(https://tc39.github.io/ecma262/#sec-modulenamespacecreate)**
+* **[ModuleNamespaceCreate](https://tc39.github.io/ecma262/#sec-modulenamespacecreate)**
     - Provides a means of creating a list of exports manually, used so that
       CommonJS `module.exports` can create `ModuleRecord`s that are
       prepopulated.
@@ -87,8 +81,8 @@ file is parsed, but before it is evaluated. This behavior is preserved by Node
 synchronously executing CJS files when they are encountered during
 `HostResolveImportedModule`.
 
-When creating a `DynamicModuleRecord` the [`[[Exports]]`]
-(https://tc39.github.io/ecma262/#table-29) is frozen upon construction. No new
+When creating a `DynamicModuleRecord` the [`[[Exports]]`](https://tc39.github.io/ecma262/#table-29)
+is frozen upon construction. No new
 exports may be added. No exports may be removed. The values of the exports will
 continue to be mutable however.
 
@@ -102,11 +96,11 @@ steps:
 2. Set M's essential internal methods to the definitions specified in
    [15.2.1.15 Abstract Module Records]
    (https://tc39.github.io/ecma262/#sec-abstract-module-records)
-3. Set M's [[Realm]] internal slot to the current Realm Record.
-4. Set M's [[Namespace]] internal slot to DelegatedModuleNamespaceObjectCreate
+3. Set M's `[[Realm]]` internal slot to the current Realm Record.
+4. Set M's `[[Namespace]]` internal slot to DelegatedModuleNamespaceObjectCreate
    (`M`, `O`)
-5. Set M's [[Environment]] internal slot to NewObjectEnvironment(`M`.[[Namespace]], **null**)
-6. Set M's [[Evaluated]] internal slot to **true**
+5. Set M's `[[Environment]]` internal slot to NewObjectEnvironment(`M`.`[[Namespace]]`, **null**)
+6. Set M's `[[Evaluated]]` internal slot to **true**
 7. Return M
 
 ### 3.2. **DelegatedModuleNamespaceObject**
@@ -120,7 +114,7 @@ Objects
 
 Field Name | Value Type | Meaning
 ---| --- | ---
-[[Delegate]] | Object  | The Object from which to delegate access
+`[[Delegate]]` | Object  | The Object from which to delegate access
 
 #### 3.2.1. `[[Get]] (P, Receiver)`
 
@@ -147,9 +141,8 @@ steps:
 1. Assert: `module` is a Module Record.
 2. Assert: `module`.[[Namespace]] is **undefined**.
 3. Let `NS` be a newly created object.
-4. Set `NS`'s essential internal methods to the definitions specified in [9.4.6
-   Module Namespace Exotic Objects]
-   (https://tc39.github.io/ecma262/#sec-module-namespace-exotic-objects)
+4. Set `NS`'s essential internal methods to the definitions specified in
+   [9.4.6 Module Namespace Exotic Objects](https://tc39.github.io/ecma262/#sec-module-namespace-exotic-objects)
 5. Set `NS`'s [[Module]] internal slot to `module`
 6. Let `exports` be a new List
 7. Let `p` be `O`.
@@ -161,8 +154,8 @@ steps:
             1. If `property` does not equal **"default"** and `exports` does
                not contain `property`, add `property` to exports
         2. If the [[GetPrototypeOf]] internal method of `p` is not the ordinary
-           object internal method defined in [9.1.1]
-           (https://tc39.github.io/ecma262/#sec-ordinary-object-internal-methods-and-internal-slots-getprototypeof)
+           object internal method defined in
+           [9.1.1](https://tc39.github.io/ecma262/#sec-ordinary-object-internal-methods-and-internal-slots-getprototypeof)
            , let `done` be **true**.
         3. Else, let `p` be the value of p's [[Prototype]] internal slot.
 10. Set the value of the [[Exports]] internal slot of `NS` to `exports`.
@@ -186,8 +179,7 @@ The abstractjob operation `NodeModuleEvaluationJob` with parameters `source` and
     2. Perform the algorithm listed in **4.** on `M`.[[RequestedModules]] while
        respecting the semantics in **5.**
     3. Connect `import` bindings for all relevant submodules using
-     [ModuleDeclarationInstantiation from the Abstract Module Record M]
-     (https://tc39.github.io/ecma262/#table-37)
+     [ModuleDeclarationInstantiation from the Abstract Module Record M](https://tc39.github.io/ecma262/#table-37)
     4. Call ! `M`.[[ModuleEvaluation]]
     5. Return `M`
 
@@ -377,7 +369,7 @@ https://tc39.github.io/ecma262/#sec-module-environment-records-getthisbinding
 
 ### 5.4. ES consuming CommonJS
 
-####5.4.1. default imports
+#### 5.4.1. default imports
 
 `module.exports` is a single value. As such it does not have the dictionary
 like properties of ES module exports. In order to facilitate named imports for
