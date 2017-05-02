@@ -69,8 +69,9 @@ Order of module evaluation within a module graph will always be preserved.
 ### 3.2. Determining if source is an ES Module
 
 A new file type will be recognised, `.mjs`, for ES modules. This file type will
-be registered with IANA as an official file type, see TC39 issue. There are no
-known issues with browsers since they
+be registered with IANA as an official file type, see
+[TC39 issue](https://github.com/tc39/ecma262/issues/322). There are no known
+issues with browsers since they
 [do not determine MIME type using file extensions](https://mimesniff.spec.whatwg.org/#interpreting-the-resource-metadata).
 
 The `.mjs` file extension will not be loadable via `require()`. This means that,
