@@ -16,7 +16,7 @@ Abbreviations:
 
 The intent of this standard is to:
 
-* implement interoperability for ESM and Node's existing CommonJS module system (CJS)
+* implement interoperability for ESM and Node's existing CJS module system
 
 ## 1. Purpose
 
@@ -28,7 +28,8 @@ The intent of this standard is to:
 [ECMA262](https://tc39.github.io/ecma262/) discusses the syntax and semantics of
 related syntax, and introduces ESM.
 
-[Dynamic Import](https://github.com/tc39/proposal-dynamic-import) introduces `import()` which will be available in all parsing goals.
+[Dynamic Import](https://github.com/tc39/proposal-dynamic-import) introduces
+`import()` which will be available in all parsing goals.
 
 ### 2.1. Types
 
@@ -57,32 +58,48 @@ related syntax, and introduces ESM.
 
 ### 3.1. Async loading
 
-ESM imports will be loaded asynchronously. This matches browser behavior. This means:
+ESM imports will be loaded asynchronously. This matches browser behavior.
+This means:
 
 * If a new `import` is queued up, it will never evaluate synchronously.
-* Between module evaluation within the same graph there may be other work done. Order of module evaluation within a module graph will always be preserved.
+* Between module evaluation within the same graph there may be other work done.
+Order of module evaluation within a module graph will always be preserved.
 * Multiple module graphs could be loading at the same time concurrently.
 
 ### 3.2. Determining if source is an ES Module
 
-A new file type will be recognised, `.mjs`, for ES modules. This file type will be registered with IANA as an official file type, see TC39 issue. There are no known issues with browsers since they [do not determine MIME type using file extensions](https://mimesniff.spec.whatwg.org/#interpreting-the-resource-metadata).
+A new file type will be recognised, `.mjs`, for ES modules. This file type will
+be registered with IANA as an official file type, see TC39 issue. There are no
+known issues with browsers since they
+[do not determine MIME type using file extensions](https://mimesniff.spec.whatwg.org/#interpreting-the-resource-metadata).
 
-The `.mjs` file extension will not be loadable via `require()`. This means that, once the Node resolution algorithm reaches file expansion, the path for path + `.mjs` would throw an error. In order to support loading ESM in CJS files please use `import()`.
+The `.mjs` file extension will not be loadable via `require()`. This means that,
+once the Node resolution algorithm reaches file expansion, the path for
+path + `.mjs` would throw an error. In order to support loading ESM in CJS files
+please use `import()`.
 
 ### 3.3. ES Import Path Resolution
 
 
 ES `import` statements will perform non-exact searches on relative or
 absolute paths, like `require()`. This means that file extensions, and
-index files will be searched. However, ESM import specifier resolution will be done using URLs which match closer to the browser. Unlike browsers, only the `file:` protocol will be supported until network and security issues can be researched for other protocols.
+index files will be searched. However, ESM import specifier resolution will be
+done using URLs which match closer to the browser. Unlike browsers, only the
+`file:` protocol will be supported until network and security issues can be
+researched for other protocols.
 
-With `import` being URL based encoding and decoding will automatically be performed. This may affect file paths containing any of the following characters: `:`,`?`,`#`, or `%`. Details of the parsing algorithm are at the [WHATWG URL Spec](https://url.spec.whatwg.org/).
+With `import` being URL based encoding and decoding will automatically be
+performed. This may affect file paths containing any of the following
+characters: `:`,`?`,`#`, or `%`. Details of the parsing algorithm are at the
+[WHATWG URL Spec](https://url.spec.whatwg.org/).
 
 * paths with `:` face multiple variations of path mutation
 * paths with `%` in their path segments would be decoded
 * paths with `?`, or `#` in their paths would face truncation of pathname
 
-All behavior differing from the [`type=module` path resolution algorithm](https://html.spec.whatwg.org/multipage/webappapis.html#resolve-a-module-specifier) will be places in locations that would throw errors in the browser.
+All behavior differing from the
+[`type=module` path resolution algorithm](https://html.spec.whatwg.org/multipage/webappapis.html#resolve-a-module-specifier)
+will be places in locations that would throw errors in the browser.
 
 #### 3.3.1. Algorithms
 
@@ -93,61 +110,82 @@ Notes:
 * The CLI has a location URL of the process working directory.
 * Paths are resolved to realpaths normally *after* all these steps.
 
-1. Apply the URL parser to `specifier`. If the result is not failure, return the result.
-2. If `specifier` does start with the character U+002F SOLIDUS (`/`), the two-character sequence U+002E FULL STOP, U+002F SOLIDUS (`./`), or the three-character sequence U+002E FULL STOP, U+002E FULL STOP, U+002F SOLIDUS (`../`)
-  1. Let `specifier` be the result of applying the URL parser to `specifier` with importing location's URL as the base URL.
-  2. Return the result of applying the path search algorithm to `specifier`.
+1. Apply the URL parser to `specifier`. If the result is not failure,
+return the result.
+2. If `specifier` does start with the character U+002F SOLIDUS (`/`), the
+two-character sequence U+002E FULL STOP, U+002F SOLIDUS (`./`), or the
+three-character sequence U+002E FULL STOP, U+002E FULL STOP,
+U+002F SOLIDUS (`../`)
+    1. Let `specifier` be the result of applying the URL parser to `specifier`
+    with importing location's URL as the base URL.
+    2. Return the result of applying the path search algorithm to `specifier`.
 3. Return the result of applying the module search algorithm to `specifier`.
 
 ##### 3.3.1.2. Path Search
 
-1. If it does not throw an error, return the result of applying the file search algorithm to `specifier`.
-2. If it does not throw an error, return the result of applying the directory search algorithm to `specifier`.
+1. If it does not throw an error, return the result of applying the file search
+algorithm to `specifier`.
+2. If it does not throw an error, return the result of applying the directory
+search algorithm to `specifier`.
 3. Throw an error.
 
 ##### 3.3.1.3. File Search
 
 1. If the resource for `specifier` exists, return `specifier`.
 2. For each file extension `[".mjs", ".js", ".json", ".node"]`
-  1. Let `searchable` be a new URL from `specifier`.
-  2. Append the file extension to the pathname of `searchable`.
-  3. If the resource for `searchable` exists, return `searchable`.
+    1. Let `searchable` be a new URL from `specifier`.
+    2. Append the file extension to the pathname of `searchable`.
+    3. If the resource for `searchable` exists, return `searchable`.
 3. Throw an error.
 
 ##### 3.3.1.4. Package Main Search
 
-1. If it does not throw an error, return the result of applying the file search algorithm to `specifier`.
-2. If it does not throw an error, return the result of applying the index search algorithm to `specifier`.
+1. If it does not throw an error, return the result of applying the file search
+algorithm to `specifier`.
+2. If it does not throw an error, return the result of applying the index
+search algorithm to `specifier`.
 3. Throw an error.
 
 ##### 3.3.1.5. Index Search
 
 1. Let `searchable` be a new URL from `specifier`.
 2. If `searchable` does not have a trailing `/` in its pathname append one.
-3. Let `searchable` be the result of applying the URL parser to `./index` with `specifier` as the base URL.
-4. If it does not throw an error, return the result of applying the file search algorithm to `searchable`.
+3. Let `searchable` be the result of applying the URL parser to `./index` with
+`specifier` as the base URL.
+4. If it does not throw an error, return the result of applying the file search
+algorithm to `searchable`.
 5. Throw an error.
 
 ##### 3.3.1.6. Directory Search
 
 1. Let `dir` be a new URL from `specifier`.
 2. If `dir` does not have a trailing `/` in its pathname append one.
-3. Let `searchable` be the result of applying the URL parser to `./package.json` with `dir` as the base URL.
-5. If the resource for `searchable` exists and it contains a "main" field.
-  1. Let `main` be the result of applying the URL parser to the `main` field with `dir` as the base URL.
-  2. If it does not throw an error, return the result of applying the package main search algorithm to `main`.
-6. If it does not throw an error, return the result of applying the index main search algorithm to `dir`.
-7. Throw an error.
+3. Let `searchable` be the result of applying the URL parser to `./package.json`
+with `dir` as the base URL.
+4. If the resource for `searchable` exists and it contains a "main" field.
+    1. Let `main` be the result of applying the URL parser to the `main` field
+    with `dir` as the base URL.
+    2. If it does not throw an error, return the result of applying the package
+    main search algorithm to `main`.
+5. If it does not throw an error, return the result of applying the index
+search algorithm to `dir`.
+6. Throw an error.
 
 ##### 3.3.1.7. Module Search
 
-1. Let `package` be a new URL from the directory containing the importing location.
+1. Let `package` be a new URL from the directory containing the importing
+location.
 2. If `package` does not have a trailing `/` in its pathname append one.
-3. Let `searchable` be the result of applying the URL parser to `./node_modules/${specifier}` with `package` as the base URL.
-4. If it does not throw an error, return the result of applying the file search algorithm to `searchable`.
-5. If it does not throw an error, return the result of applying the directory search algorithm to `searchable`.
-6. Let `parent` be the result of applying the URL parser to `../` with `package` as the base URL.
-7. If it does not throw an error, return the result of applying the module search algorithm to `specifier` with an importing location of `parent`.
+3. Let `searchable` be the result of applying the URL parser to
+`./node_modules/${specifier}` with `package` as the base URL.
+4. If it does not throw an error, return the result of applying the file search
+algorithm to `searchable`.
+5. If it does not throw an error, return the result of applying the directory
+search algorithm to `searchable`.
+6. Let `parent` be the result of applying the URL parser to `../` with
+`package` as the base URL.
+7. If it does not throw an error, return the result of applying the module
+search algorithm to `specifier` with an importing location of `parent`.
 8. Throw an error.
 
 ##### 3.3.1.7. Examples
@@ -166,7 +204,8 @@ import '../bar';
 import '/baz';
 ```
 
-Applies the URL parser to the specifiers with a base url of the importing location. Then performs the path search algorithm.
+Applies the URL parser to the specifiers with a base url of the importing
+location. Then performs the path search algorithm.
 
 ```javascript
 import 'baz';
@@ -244,7 +283,9 @@ packages, some people may prefer to exclude main entirely in the case of using
 
 #### 4.5.1. Environment Variables
 
-ESM will not be bootstrapped with magic variables and will await upcoming specifications in order to provide such behaviors in a standard way. As such, the following variables are changed:
+ESM will not be bootstrapped with magic variables and will await upcoming
+specifications in order to provide such behaviors in a standard way. As such,
+the following variables are changed:
 
 | Variable | Exists | Value |
 | ---- | ---- | --- |
@@ -256,15 +297,20 @@ ESM will not be bootstrapped with magic variables and will await upcoming specif
 | __filename | n | |
 | __dirname | n | |
 
-Like normal scoping rules, if a variable does not exist in a scope, the outer scope is used to find the variable. Since ESM are always strict, errors may be thrown upon trying to use variables that do not exist globally when using ESM.
+Like normal scoping rules, if a variable does not exist in a scope, the outer
+scope is used to find the variable. Since ESM are always strict, errors may be
+thrown upon trying to use variables that do not exist globally when using ESM.
 
 ##### 4.5.1.1. Standardization Effort
 
-[Efforts are ongoing to reserve a specifier](https://github.com/whatwg/html/issues/1013) that will be compatible in both Browsers and Node. Tentatively it will be `js:context` and export a single `{url}` value.
+[Efforts are ongoing to reserve a specifier](https://github.com/whatwg/html/issues/1013)
+that will be compatible in both Browsers and Node. Tentatively it will be
+`js:context` and export a single `{url}` value.
 
 ##### 4.5.1.2. Getting CJS Variables Workaround
 
-Although heavily advised against, you can have a CJS module sibling for your ESM that can export these things:
+Although heavily advised against, you can have a CJS module sibling for your
+ESM that can export these things:
 
 ```js
 // expose.js
@@ -279,8 +325,9 @@ const {__dirname} = expose;
 
 ### 4.6. ES consuming CommonJS
 
-After *any* CJS finishes evaluation, it will be placed into the same cache as ESM.
-The value of what is placed in the cache will reflect a single default export pointing to the value of `module.exports` at the time evaluation ended.
+After *any* CJS finishes evaluation, it will be placed into the same cache as
+ESM. The value of what is placed in the cache will reflect a single default
+export pointing to the value of `module.exports` at the time evaluation ended.
 
 Essentially after any CJS completes evaluation:
 
@@ -290,11 +337,18 @@ Essentially after any CJS completes evaluation:
 4. create an ESM with `{default:module.exports}` as its namespace
 5. place the ESM in the ESM cache
 
+Note: step 4 is the only time the value of `module.exports` is assigned to the
+ESM.
+
 #### 4.6.1. default imports
 
 `module.exports` is a single value. As such it does not have the dictionary
-like properties of ES module exports. In order to transform a CJS module into ESM a `default` export which will
-point to the value of `module.exports` that was snapshotted *imediately after the CJS finished evaluation*. Due to problems in supporting named imports, they will not be enabled by default. Space is intentionally left open to allow named properties to be supported through future explorations.
+like properties of ES module exports. In order to transform a CJS module into
+ESM a `default` export which will point to the value of `module.exports` that
+was snapshotted *imediately after the CJS finished evaluation*. Due to problems
+in supporting named imports, they will not be enabled by default. Space is
+intentionally left open to allow named properties to be supported through
+future explorations.
 
 ##### 4.6.1.1. Examples
 
@@ -458,7 +512,8 @@ The objects create by an ES module are [ModuleNamespace Objects][5].
 
 These have `[[Set]]` be a no-op and are read only views of the exports of an ES
 module. Attempting to reassign any named export will not work, but assigning to
-the properties of the exports follows normal rules.
+the properties of the exports follows normal rules. This also means that keys
+cannot be added.
 
 ### 4.9. CJS modules allow mutation of imported modules
 
@@ -501,11 +556,14 @@ module will always see `123`.
 
 ## 5. JS APIs
 
-* `vm.Module` and ways to create custom ESM implementations such as those in [jsdom](https://github.com/tmpvar/jsdom).
-* `vm.ReflectiveModule` as a means to declare a list of exports and expose a reflection API to those exports.
-* Providing an option to both `vm.Script` and `vm.Module` to intercept `import()`.
+* `vm.Module` and ways to create custom ESM implementations such as those in
+[jsdom](https://github.com/tmpvar/jsdom).
+* `vm.ReflectiveModule` as a means to declare a list of exports and expose a
+reflection API to those exports.
+* Providing an option to both `vm.Script` and `vm.Module` to intercept
+`import()`.
 
 * Loader hooks for:
-  * Rewriting the URL of an `import` request *prior* to loader resolution.
-  * Way to insert Modules a module's local ESM cache.
-  * Way to insert Modules the global ESM cache.
+    * Rewriting the URL of an `import` request *prior* to loader resolution.
+    * Way to insert Modules a module's local ESM cache.
+    * Way to insert Modules the global ESM cache.
