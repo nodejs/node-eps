@@ -174,7 +174,7 @@ search algorithm to `dir`.
 ##### 3.3.1.7. Module Search
 
 1. Let `package` be a new URL from the directory containing the importing
-location.
+location. If `package` is the same as the importing location, throw an error.
 2. If `package` does not have a trailing `/` in its pathname append one.
 3. Let `searchable` be the result of applying the URL parser to
 `./node_modules/${specifier}` with `package` as the base URL.
