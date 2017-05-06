@@ -110,13 +110,10 @@ where splitting resolution and loading concerns from compilation is valuable.
 
 # Implementation
 
-The idea is to go for something similar to the existing `Module._extensions`
-interface, but with three stages: resolving, loading and compiling.
-
-Each stage would interact with a `ModuleRequest` object which expresses the
-lifetime of a module request through the `resolve`, `load` and `compile` stages.
-Initially, it would only include the `parent` and `inputPath` fields. Other
-fields would be populated in the different lifecycle stages.
+There are a few possible implementations to discuss, both of which rely on a
+`ModuleRequest` object to express the module loading lifecycle. Initially it
+would only include the `parent` and `inputPath` fields. Other fields would be
+populated in the different lifecycle stages.
 
 ### `ModuleRequest`
 
@@ -143,6 +140,11 @@ the `loader` stage.
 
 The final module object, built by the `compiler` stage.
 
+## Hook-based
+
+The idea here is to go for something similar to `Module._extensions`, but with
+three stages: resolving, loading and compiling.
+
 ### `require.resolvers`
 
 It is the responsibility of `require.resolvers` extension handlers to receive
@@ -155,22 +157,20 @@ This would roughly correspond to the current `Module._resolveLookupPaths`
 implementation, but it should instead receive the module request object which
 it will modify in-place.
 
+The first resolver to return a non-null value would decide the `resolvedPath`
+value in subsequent stages.
+
 ```js
 const mockedPaths = {
   'foo.js': path.join(__dirname, 'mocked-foo.js')
 }
 
-const originalResolver = require.resolvers['require']
-require.resolvers['require'] = function customResolver(request) {
-  if (Object.keys(mockedPaths).includes(request.inputPath)) {
-    return mockedPaths[request.inputPath]
+require.resolvers.push(({ inputPath }) => {
+  if (Object.keys(mockedPaths).includes(inputPath)) {
+    return mockedPaths[inputPath]
   }
-  originalResolver(request)
-}
+})
 ```
-
-By defining named behaviour specific to `require()`, we open the door for
-supporting the different behaviour of `import` in the future.
 
 ### `require.loaders`
 
@@ -178,31 +178,145 @@ The `require.loaders` extension handlers receive the `Module` object after the
 `resolver` stage and use the resolved path to attempt to load the contents of
 the module file.
 
-```js
-const originalLoader = require.loaders['.js']
-require.loaders['.js'] = function customLoader(request) {
-  // This populates the `contents` field
-  originalLoader(request)
+Returning `null` would skip to the next loader in the pipeline. If no loader
+returns a value, a `MODULE_NOT_FOUND` error is thrown.
 
-  request.contents = request.contents.replace(
+```js
+require.loaders.push(({ resolvedPath }) => {
+  if (!/\.js$/.test(resolvedPath)) return
+  try {
+    return fs.readFileSync(resolvedPath).toString()
+  } catch (err) {
+    if (err.code === 'ENOENT') return
+    throw new Error(`module load error: ${err.message}`)
+  }
+})
+```
+
+NOTE: How native modules would be handled in the three-stage design is a bit
+unknown, as they don't have a textual intermediate representation, they are
+loaded directly from the file path to a `.node` file to a JS object in C++ via
+`process.dlopen`. It might make sense for native modules to have a `compiler`
+and not a `loader`.
+
+### `require.transformers`
+
+The `require.transformers` extension handlers receive the `Module` object after
+the `loader` stage and alter the text content of the module.
+
+```js
+require.transformers.push(({ contents, resolvedPath }) => {
+  if (!/\.js$/.test(resolvedPath)) return
+  return contents.replace(
     /module\.exports\s+\=/,
     // Don't forget that `exports` object now!
     'exports = module.exports ='
   )
-}
+})
 ```
 
 ### `require.compilers`
 
-The `require.compilers` extension handlers receive the `Module` object after the
-`loader` stage and pass the `contents` into a compiler function to build the
-final module object.
+The `require.compilers` extension handlers receive the `ModuleRequest` object
+after the `transform` stage and pass the `contents` into a compiler function
+to build the final module object.
 
 ```js
-require.compilers['.yaml'] = function yamlCompiler(request) {
-  request.module.exports = yaml.parse(request.contents)
-}
+require.compilers.push(({ contents, resolvedPath }) => {
+  if (!/\.yaml$/.test(resolvedPath)) return
+  const module = new Module()
+  module.filename = resolvedPath
+  module.exports = yaml.parse(contents)
+  return module
+})
 ```
+
+## Loader objects
+
+Another possible implementation is an object-based design, which would allow for
+easier managing of dependency order between loaders by iterating through the
+loaders array and inspecting `name`. This would be helpful for manipulating the
+order of the loaders in situations like when you need to ensure your code
+coverage instrumentation is applied after a babel transpile.
+
+I prefer this approach, but it's a bit more involved and may be difficult to
+achieve without backwards-incompatible changes.
+
+```js
+class JSONConfigLoader {
+  constructor({ base }) {
+    super()
+    this.name = 'JSONConfigLoader'
+    this.base = base
+  }
+
+  // Receives a `ModuleRequest` object
+  // Return a value to set `resolvedPath`
+  // Return null to remove loader from remainder of this request pipeline
+  resolve({ inputPath }) {
+    if (!/^config\:/.test(inputPath)) return
+    return `${this.base}/${path.slice(7)}.json`
+  }
+
+  // Return a string to set `contents` to pass along to subsequent stages
+  // Return null to remove loader from remainder of this request pipeline
+  // Throw to indicate module loading failure (other than not found)
+  load({ resolvedPath }) {
+    try {
+      return fs.readFileSync(resolvedPath).toString()
+    } catch (err) {
+      if (err.code === 'ENOENT') return
+      throw new Error(`module load error: ${err.message}`)
+    }
+  }
+
+  // Return transformed contents
+  // Throw to indicate module transform failure
+  transform({ contents, resolvedPath }) {
+    if (!contents.contains('testing')) {
+      throw new Error('module transform error: "testing" not found')
+    }
+
+    return contents.replace(/testing/, 'test')
+  }
+
+  // Return the final compiled module object
+  // Throw to indicate parse/compile failure
+  compile({ contents, resolvedPath }) {
+    try {
+      const module = new Module()
+      module.filename = resolvedPath
+      module.exports = JSON.parse(contents)
+      return module
+    } catch (err) {
+      throw new Error(`module compile error: ${err.message}`)
+    }
+  }
+}
+
+// Add the custom loader to the loaders array
+require.loaders.push(new JSONConfigLoader({
+  base: path.join(process.cwd(), 'configs')
+}))
+
+const myConfig = require('config:some-custom-config')
+```
+
+This example is implemented as a class, but it could also just be a simple
+object.
+
+Each stage handler would receive a `ModuleRequest` object, with each handler
+corresponding to an assignment to a particular property of that request. The
+`resolve` method sets `resolvedPath`, the `load` method sets `contents`, the
+`transform` method alters `contents`, the `compile` method sets `module`.
+
+Returning `null` from any of `resolve`, `load`, `transform` or `compile` will
+result in that loader being removed from the remainder of the pipeline for that
+load request. However, any of `load`, `transform` and `compile` can be left
+unimplemented to skip just that step. Returning a value from `load` will skip
+the remaining loaders in the `load` stage and proceed to the `transform` stage.
+Similar to `load`, the first `compile` to return a non-null value will skip the
+remainder of the compile step and that value will become the final module.
 
 # Notes
 
@@ -210,5 +324,7 @@ require.compilers['.yaml'] = function yamlCompiler(request) {
 but the current resolution stage occurs before attempting to build a module
 instance, so it's possible backwards-incompatible changes may be required to
 do that, thus the safer approach of an entirely new object.
+- For the object-based style, it might also be a good idea to, rather than have
+the `transform` method, have `preCompile` and `postCompile` transformers.
 
 [1]: https://github.com/nodejs/node/blob/master/lib/_tls_wrap.js#L829
