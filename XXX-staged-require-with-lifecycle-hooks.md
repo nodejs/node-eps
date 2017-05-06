@@ -25,24 +25,46 @@ Some examples include:
 
 ### Safety
 
-Monkey-patching can be unsafe for many reasons. Sometimes code the behaviour
-of code changes based on parameter length of input functions--express is a good
-example of that. Sometimes patches can interfere with getter/setter behaviour.
+Monkey-patching can be unsafe for many reasons.
+
+Sometimes the behaviour of code changes based on the parameter length of a
+function given as input to another, such as the `(req, res)`, `(req, res, next)`
+and `(err, req, res, next)` route handler signatures in express, which will
+switch the first argument to being an error instance if the function parameter
+arity is 4. Monkey-patching express route handlers properly requires branching
+instrumentation patches which provide different patched functions to match the
+length of the original route handler. This is easy to miss or get wrong, which
+will generally result in a crashed app.
+
+Sometimes patches can interfere with getter/setter behaviour. An example of this
+is `pg.native` mutating the rest of the postgres driver module to expect the
+native bindings to be used. Dynamic instrumentation is unaware of what the app
+might want to do in the future, so it needs to patch this optimistically, but
+if one naively tries to just do `const oldProp = pg.native; pg.native = newProp`
+it will trigger the getter behaviour, breaking the JS interface. Again, this is
+easy to miss, likely resulting in a crashed app.
+
 It can be difficult to differentiate between async callbacks that need code to
-maintain barrier linkage and sync callbacks which do not. Some interfaces
-accept multiple function arguments and dynamically identifying which is a
-callback that needs to be instrumented can be unreliable. Any form of queueing,
-even simply putting a callback in an array to be called elsewhere, will break
-continuation linking and requires manual intervention to maintain that linkage
-which is not always possible for dynamic instrumentation.
+maintain barrier linkage and sync callbacks which do not. Some interfaces also
+accept multiple function arguments or callbacks stored in an options object
+which could contain other functions, so dynamically identifying callbacks that
+need to be instrumented can be unreliable or even impossible.
+
+Any form of queueing, even simply putting a callback in an array to be called
+elsewhere, will break continuation linking and requires manual intervention to
+maintain that linkage which is not always possible for dynamic instrumentation.
 
 Most APM providers try/catch constantly because the existing solutions for
 tracking continuation lose context regularly. We've done the best we can with
 monkey-patching, but we've hit a wall and have been pushing for things like
 `async-hooks` to improve the situation. However, `async-hooks` only solves part
-of the problem--linking the callsite to the callback--but context on what was
-happening still requires monkey-patching, and there are plenty of situations
+of the problem, linking the callsite to the callback. However, context on what
+was happening still requires monkey-patching, and there are plenty of situations
 where context-loss is not the hard part.
+
+At the code text level, applying heuristic behaviour analysis is possible to
+more deeply understand the complex interaction of the code, enabling a much
+wider range of possibilities in terms of dynamic instrumentation.
 
 ### Performance
 
@@ -52,11 +74,11 @@ deoptimization. Sometimes heavy runtime checking is required with constant
 dynamic function generation and reassignment, which can put a lot of undue
 stress on the optimizer and garbage collector.
 
-If, for example, one could intercept the module loader and apply an AST
-transform before compilation, there's a great deal that could be gained.
-Most Run-time checking would simply disappear. Most closures would disappear.
-Context loss would disappear because the transformer could take advantage of
-lexical scope to describe linkage directly at callsites.
+If one could intercept the module loader and apply code transformations directly
+to the code text before compilation, there's a great deal that could be gained.
+Most, if not all, run-time checking would simply disappear. Most closures would
+disappear. Context loss would mostly disappear because the transformer could
+take advantage of lexical scope to describe linkage directly at callsites.
 
 ### Flexibility
 
@@ -80,7 +102,7 @@ With an AST transform, a single line of code could be inserted
 
 A big issue on the horizon is that, if ES Modules are adopted, modules become
 immutable at build time. This means that the current monkey-patching approach
-will not work anymore. TC39 has already suggested using AST transformation
+will not work anymore. Members of TC39 have already suggested AST transforms
 to deal with this issue.
 
 Another concern with ES Modules is the difference in loader behaviour. This is
