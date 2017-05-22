@@ -377,7 +377,7 @@ https://tc39.github.io/ecma262/#sec-module-environment-records-getthisbinding
 
 ### 5.4. ES consuming CommonJS
 
-####5.4.1. default imports
+#### 5.4.1. default imports
 
 `module.exports` is a single value. As such it does not have the dictionary
 like properties of ES module exports. In order to facilitate named imports for
