@@ -143,22 +143,23 @@ The final module object, built by the `compiler` stage.
 ## Hook-based
 
 The idea here is to go for something similar to `Module._extensions`, but with
-three stages: resolving, loading and compiling.
+four stages: resolving, loading, transforming and compiling.
 
 ### `require.resolvers`
 
 It is the responsibility of `require.resolvers` extension handlers to receive
-the in-process `Module` object and use the metadata on it to figure out how to
-resolve a load. For `require()` relative location loading, it'd simply look at
-the `parent` and resolve the input string of the `require()` call relative to
-the `parent` module.
+the in-process `ModuleRequest` object and use the metadata on it to figure out
+how to resolve a load. For `require()` relative location loading, it'd simply
+look at the `parent` and resolve the input string of the `require()` call
+relative to the `parent` module.
 
 This would roughly correspond to the current `Module._resolveLookupPaths`
 implementation, but it should instead receive the module request object which
 it will modify in-place.
 
-The first resolver to return a non-null value would decide the `resolvedPath`
-value in subsequent stages.
+The first resolver to return a string would determine the `resolvedPath` field,
+ending the resolver stage. It would then either pull an entry from the cache
+which matches the path or would begin the loading stage.
 
 ```js
 const mockedPaths = {
@@ -174,9 +175,9 @@ require.resolvers.push(({ inputPath }) => {
 
 ### `require.loaders`
 
-The `require.loaders` extension handlers receive the `Module` object after the
-`resolver` stage and use the resolved path to attempt to load the contents of
-the module file.
+The `require.loaders` extension handlers receive the `ModuleRequest` object
+after the `resolver` stage and use the resolved path to attempt to load the
+contents of the module file.
 
 Returning `null` would skip to the next loader in the pipeline. If no loader
 returns a value, a `MODULE_NOT_FOUND` error is thrown.
@@ -327,4 +328,4 @@ do that, thus the safer approach of an entirely new object.
 - For the object-based style, it might also be a good idea to, rather than have
 the `transform` method, have `preCompile` and `postCompile` transformers.
 
-[1]: https://github.com/nodejs/node/blob/master/lib/_tls_wrap.js#L829
+[1]: https://github.com/nodejs/node/blob/ed365653f6eb74d58a1d2a1c1bdb20e4baf67fa0/lib/_tls_wrap.js#L827
