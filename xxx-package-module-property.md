@@ -246,14 +246,21 @@ empty configuration entry.
 undefined, packagePath: undefined }_.
 
 > **RESOLVE_FILE(filePath: String): String**
-> 1. If _filePath_ is a file, return _X_.
-> 1. If _"${filePath}.mjs"_ is a file, return _"${filePath}.mjs"_.
-> 1. If _"${filePath}.js"_ is a file, return _"${filePath}.js"_.
-> 1. If _"${filePath}.json"_ is a file, return _"${filePath}.json"_.
-> 1. If _"${filePath}.node"_ is a file, return _"${filePath}.node"_.
-> 1. If _"${filePath}/index.js"_ is a file, return _"${filePath}/index.js"_.
-> 1. If _"${filePath}/index.json"_ is a file, return _"${filePath}/index.json"_.
-> 1. If _"${filePath}/index.node"_ is a file, return _"${filePath}/index.node"_.
+> 1. If _filePath_ is a file, return the real path of _filePath_.
+> 1. If _"${filePath}.mjs"_ is a file, return return the real path of
+_"${filePath}.mjs"_.
+> 1. If _"${filePath}.js"_ is a file, return return the real path of
+_"${filePath}.js"_.
+> 1. If _"${filePath}.json"_ is a file, return return the real path of
+_"${filePath}.json"_.
+> 1. If _"${filePath}.node"_ is a file, return return the real path of
+_"${filePath}.node"_.
+> 1. If _"${filePath}/index.js"_ is a file, return return the real path of
+_"${filePath}/index.js"_.
+> 1. If _"${filePath}/index.json"_ is a file, return return the real path of
+_"${filePath}/index.json"_.
+> 1. If _"${filePath}/index.node"_ is a file, return return the real path of
+_"${filePath}/index.node"_.
 > 1. Return _undefined_.
 
 > **NODE_MODULES_RESOLVE(name: String, parentPath: String): String**
