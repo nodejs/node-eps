@@ -21,21 +21,41 @@ adjustment is included in section 5. Draft Specification.
 ## 2. Motivation
 
 There is still uncertainty as to how exactly to distinguish an ES Module from
-a CommonJS module. While `.mjs` and `"use module"`
-(https://github.com/tc39/proposal-modules-pragma) act as useful indicators,
-these properties act as file-specific indicators of the module format. If we
-are to keep the `.js` extension without making `"use module"` mandatory, then
-there is also a need for a more global indication that a package contains only
-ES modules.
+a CommonJS module. While `.mjs` (and possibly `"use module"`) can act as a
+useful indicator, it is still a file-specific indicator of the module format.
+If we are to keep the `.js` extension without making `"use module"` mandatory,
+then there is also a need for a more global indication that a package contains
+only ES modules.
+
+From a user perspective, there are many possible reasons for wanting to
+continue to use the `.js` extension. The standard way of loading modules in the
+browser for JS users in future will likely be by creating a file, and loading
+it with `<script type="module" src="file.js">`. There would be confusion if not
+everyone gets on board with the `.mjs` file extension for every workflow
+including browser workflows like this, as users wouldn't necessarily understand
+why they need to change their code to run correctly in NodeJS when moving
+between environments. In addition, using a `.js` extension is the way that all
+users deal with ES modules already through build tools, so there will be some
+friction trying to alter these existing habits. Regardless of the underlying
+reasons, as long as there are a group of users vocally attached to this
+extension, their opinions should at least be considered, and that is the aim
+of this proposal to provide a path for the `.js` file extension to be used
+for future JS modules.
 
 Currently all our JS build tools detect modules in slightly different ways.
 The `package.json` `module` property has gained good traction as an entry point
-mechanism, but there isn't currently clarity on how exactly this property
-behaves in the edge cases and for submodule requires (`pkg/x` imports). Since
-tools are currently driving the ecosystem conventions, it is worth refining the
-exact conventions with an active specification that can gain support, so that
-we can continue to converge on the module contract in NodeJS, and do our best
-to avoid incompatibilities in future.
+mechanism in Rollup
+([Rollup pkg.module spec](https://github.com/rollup/rollup/wiki/pkg.module))
+and Webpack
+([implementation issue](https://github.com/webpack/webpack/issues/1979)),
+but there isn't currently clarity on how exactly this property behaves in the
+edge cases and for submodule requires (`pkg/x` imports). Since tools are
+currently driving the ecosystem conventions, it is worth refining the exact
+conventions with an active specification that can gain support, so that we can
+continue to converge on the module contract in NodeJS, and do our best to avoid
+incompatibilities in future. By building on an existing convention that is
+working for these tools already, there is already some validation of the
+approach.
 
 ## 4. Proposal
 
@@ -84,11 +104,24 @@ tell its users to just import via `import {x} from 'pkgName'` or
 `require('pkgName').x`, with the `module` and `main` properties applying
 respectively.
 
-In the case where a package publicly exposes sub-modules, it would need
-to document that the CommonJS and ES Module sources are at different paths -
-`import {x} from 'pkgName/submodule.js'` and
-`import {x} from 'pkgName/cjs/submodule.js'`. Or simply a `.js` and
- `.mjs` variant, this being the author's preference.
+In most cases, a package aiming to provide a solid baseline support of Node
+versions likely need only ship CommonJS modules, there is no rush on this
+deprecation path.
+
+A package aiming to support modern NodeJS versions only, can then ship ES
+modules without backwards compatibility just like using any other language
+feature like classes or arrow functions.
+
+The mixed case then applies to packages with a wide support base, that want
+to specifically expose ES modules to certain users. In such an edge case
+situation, package authors could specially document their separate ES module
+sub module require interface:
+
+`import {x} from 'pkgName/submodule.js'` for CommonJS and
+`import {x} from 'pkgName/es/submodule.js'` for the ES module variant.
+
+Alternatively simply a `.js` and `.mjs` variant, this being the author's
+preference.
 
 ## 4.2 Package Boundary Detection
 
@@ -107,8 +140,11 @@ These rules are taken into account in the draft specification included below.
 ## 4.3 Loading Modules without a package.json
 
 If writing a `.js` file without any `package.json` configuration, it remains
-possible to opt-in to ES modules by indicating this by either using the `.mjs`
-file extension or `"use module"` directive, which always take preference.
+possible to opt-in to ES modules by indicating this by using the `.mjs`
+extension.
+
+When running NodeJS in a repl mode, a flag could possibly be considered to
+treat the passed source as an ES module.
 
 ## 4.4 Packages Consisting of both CommonJS and ES Modules
 
@@ -203,10 +239,6 @@ binary.
 >    1. If _resolvedPath_ ends with _".wasm"_ then,
 >       1. Throw _Invalid Module Name_.
 >    1. If _loadAsModule_ is set to _true_ then,
->       1. Return the resolved module at _resolvedPath_, loaded as an
-ECMAScript module.
->    1. If the module at _resolvedPath_ contains a _"use module"_ directive
-then,
 >       1. Return the resolved module at _resolvedPath_, loaded as an
 ECMAScript module.
 >    1. Otherwise,
