@@ -143,8 +143,8 @@ If writing a `.js` file without any `package.json` configuration, it remains
 possible to opt-in to ES modules by indicating this by using the `.mjs`
 extension.
 
-When running NodeJS in a repl mode, a flag could possibly be considered to
-treat the passed source as an ES module.
+When running NodeJS code via `node -e` or similar, an alternate flag could
+possibly be considered to treat the passed source as an ES module.
 
 ## 4.4 Packages Consisting of both CommonJS and ES Modules
 
