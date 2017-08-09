@@ -79,6 +79,10 @@ once the Node resolution algorithm reaches file expansion, the path for
 path + `.mjs` would throw an error. In order to support loading ESM in CJS files
 please use `import()`.
 
+#### 3.2.1 MIME of `.mjs` files
+
+The MIME used to identify `.mjs` files should be a [web compatible JavaScript MIME Type](https://html.spec.whatwg.org/multipage/scripting.html#javascript-mime-type).
+
 ### 3.3. ES Import Path Resolution
 
 
