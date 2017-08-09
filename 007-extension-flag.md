@@ -28,6 +28,8 @@ If mixing `--entry-extension` with a non-stream argument such as a file path or 
 ```sh
 # exits with an error
 node --entry-extension=json app.js
+# exits with an error
+node --entry-extension=js app.js
 ```
 
 ## Alternate Possibilities
