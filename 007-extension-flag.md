@@ -21,6 +21,15 @@ node --entry-extension=mjs <app.mjs
 node --entry-extension=mjs -e $(cat <app.mjs)
 ```
 
+## Considerations
+
+If mixing `--entry-extension` with a non-stream argument such as a file path or entry URL, Node should exit with an error prior to any evaluation. This also means that `--entry-extension` cannot be used to override the extension of file paths.
+
+```sh
+# exits with an error
+node --entry-extension=json app.js
+```
+
 ## Alternate Possibilities
 
 Some alternate possibilities exist that might be relevant. `--entry-url` for example could be used to provide an `import.meta.url` properly while also providing the pathname that contains an extension. However, since URLs are not mandated to have file extensions this might be for nothing. Applications can also access `process.cwd()` to recreate similar data to `import.meta.url`.
