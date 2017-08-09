@@ -81,7 +81,8 @@ please use `import()`.
 
 #### 3.2.1 MIME of `.mjs` files
 
-The MIME used to identify `.mjs` files should be a [web compatible JavaScript MIME Type](https://html.spec.whatwg.org/multipage/scripting.html#javascript-mime-type), preferably `application/javascript`.
+The MIME used to identify `.mjs` files should be a [web compatible JavaScript MIME Type](https://html.spec.whatwg.org/multipage/scripting.html#javascript-mime-type). 
+In accordance with the default value listed in the [HTML Specification dependencies section](https://html.spec.whatwg.org/#dependencies) it should be identified as `text/javascript` preferably.
 
 ### 3.3. ES Import Path Resolution
 
