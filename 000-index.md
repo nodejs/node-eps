@@ -6,3 +6,4 @@
 * [Port core to uv_link_t](004-uv_link_t.md)
 * [ABI Stable Module API](005-ABI-Stable-Module-API.md)
 * [AsyncHooks API](006-asynchooks-api.md)
+* [Extension CLI Flag](007-extension-flag.md)
