@@ -32,6 +32,18 @@ node --entry-extension=json app.js
 node --entry-extension=js app.js
 ```
 
+### Userland Extensions
+
+Some libraries extend `require.extensions` with new extensions. These libraries should be considered when determining the list of extensions allowed in `--entry-extension`.
+
+Any future extensions to the ESM based loading mechanisms will have to account for collisions and define behavior when they collide.
+
+### Early Errors
+
+Any unknown file extension should prevent the main entry point to the program from executing anything. Preloaded files such as using `--require` should continue to load normally.
+
+Any error produced by this should describe how to get the list of known extensions; and the error should attempt to point towards how to add an extension if needed. The error may change from preferring `require.extensions` to a new mechanism that supports ESM over time.
+
 ## Alternate Possibilities
 
 Some alternate possibilities exist that might be relevant. `--entry-url` for example could be used to provide an `import.meta.url` properly while also providing the pathname that contains an extension. However, since URLs are not mandated to have file extensions this might be for nothing. Applications can also access `process.cwd()` to recreate similar data to `import.meta.url`.
