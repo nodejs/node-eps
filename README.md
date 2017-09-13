@@ -1,5 +1,9 @@
 # Node.js Enhancement Proposals
 
+**NOTE**: The Node.js TSC has [recently](https://github.com/nodejs/TSC/issues/335)
+decided to archive the node-eps repository and process. See https://github.com/nodejs/TSC/issues/335
+for more detail.
+
 ## Overview
 
 This repository contains the Node Enhancement Proposals (EPs) collection. These
