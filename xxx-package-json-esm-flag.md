@@ -6,14 +6,13 @@
 
 ## 1. Background
 
-This proposal specifies the `"module"` property in the package.json, building
-on the previous work in the
+This proposal specifies an `"esm"` flag in the package.json, building
+on the previous work in the interop space including
 [In Defense of Dot JS](https://github.com/dherman/defense-of-dot-js/blob/master/proposal.md)
 proposal (DDJS), as well as many other discussions.
 
-Instead of supporting the additional `"modules"` and `"modules.root"`
-properties from that proposal, this proposal aims to adjust the handling of
-`"module"` slightly so that it is the only property supported.
+Instead of supporting a `"module"` property or other mechanism,
+this proposal simply suggests an `"esm": true` flag in a package.json.
 
 A draft specification of the NodeJS module resolution algorithm with this
 adjustment is included in section 5. Draft Specification.
@@ -21,11 +20,10 @@ adjustment is included in section 5. Draft Specification.
 ## 2. Motivation
 
 There is still uncertainty as to how exactly to distinguish an ES Module from
-a CommonJS module. While `.mjs` (and possibly `"use module"`) can act as a
-useful indicator, it is still a file-specific indicator of the module format.
-If we are to keep the `.js` extension without making `"use module"` mandatory,
-then there is also a need for a more global indication that a package contains
-only ES modules.
+a CommonJS module. While `.mjs` can act as a useful indicator, it is still a 
+file-specific indicator of the module format. If we are to keep the `.js`
+extension without making adding metadata to sources, then there is also a 
+need for a more global indication that a package contains only ES modules.
 
 From a user perspective, there are many possible reasons for wanting to
 continue to use the `.js` extension. The standard way of loading modules in the
@@ -42,21 +40,6 @@ extension, their opinions should at least be considered, and that is the aim
 of this proposal to provide a path for the `.js` file extension to be used
 for future JS modules.
 
-Currently all our JS build tools detect modules in slightly different ways.
-The `package.json` `module` property has gained good traction as an entry point
-mechanism in Rollup
-([Rollup pkg.module spec](https://github.com/rollup/rollup/wiki/pkg.module))
-and Webpack
-([implementation issue](https://github.com/webpack/webpack/issues/1979)),
-but there isn't currently clarity on how exactly this property behaves in the
-edge cases and for submodule requires (`pkg/x` imports). Since tools are
-currently driving the ecosystem conventions, it is worth refining the exact
-conventions with an active specification that can gain support, so that we can
-continue to converge on the module contract in NodeJS, and do our best to avoid
-incompatibilities in future. By building on an existing convention that is
-working for these tools already, there is already some validation of the
-approach.
-
 ## 4. Proposal
 
 Instead of trying to consider a single unified resolver, we break the behaviour
@@ -72,58 +55,15 @@ using ES modules, the new ES module resolver algorithm, as along the lines
 specified here would be applied.
 
 **The rule proposed here is that the ES module resolver always loads a module
-from package with a "module" property as an ES module, and loads a module from
-a package without that property as a CommonJS module (unless it is a .mjs file
-or "use module" source).**
+from package with an `"esm": true` property in its package.json file as an ES
+module, and loads a module from a package without that property as a CommonJS
+module (unless it is a .mjs file).**
 
-Under this rule, the simple cases remain the same as the DDJS proposal:
+This is simpler than the `"module"` property in the package.json because it
+does not interfere in making the main entry point detection any different to
+how it already works today, it only changes the parsing default.
 
-* A package with only a `main` and no `module` property will be loaded as
-containing CommonJS modules only.
-* A package with only a `module` property and no `main` property will be loaded
-as containing ES Modules only.
-
-The difficult case with the DDJS proposal is the transition case of a package
-that contains both a `main` and `module` property - selecting which main entry
-point and target to use when loading `pkg` or `pkg/x.js`.
-
-For a package that contains both a `main` and a `module` property -
-* When the parent module doing the require is an ES Module, the `module` main
-will apply, and any module loaded from the package will be loaded as an ES Module.
-* When the parent module doing the require is a CommonJS module, the `main`
-main will apply, and any module loaded from the package will be loaded as
-a CommonJS Module.
-
-In this way, we continue to support the existing ecosystem with backwards
-compatibility, while keeping the scope of the specification as simple as possible.
-
-## 4.1 Public API for Mixed CJS and ES Module Packages
-
-A package delivering both CommonJS and ES Modules would then typically
-tell its users to just import via `import {x} from 'pkgName'` or
-`require('pkgName').x`, with the `module` and `main` properties applying
-respectively.
-
-In most cases, a package aiming to provide a solid baseline support of Node
-versions likely need only ship CommonJS modules, there is no rush on this
-deprecation path.
-
-A package aiming to support modern NodeJS versions only, can then ship ES
-modules without backwards compatibility just like using any other language
-feature like classes or arrow functions.
-
-The mixed case then applies to packages with a wide support base, that want
-to specifically expose ES modules to certain users. In such an edge case
-situation, package authors could specially document their separate ES module
-sub module require interface:
-
-`import {x} from 'pkgName/submodule.js'` for CommonJS and
-`import {x} from 'pkgName/es/submodule.js'` for the ES module variant.
-
-Alternatively simply a `.js` and `.mjs` variant, this being the author's
-preference.
-
-## 4.2 Package Boundary Detection
+## 4.1 Package Boundary Detection
 
 This proposal, like DDJS, requires that we can get the package configuration
 given only a module path. This is based on checking the package.json file
@@ -152,32 +92,29 @@ For a package that contains both ES modules in a `lib` folder and CommonJS
 modules in a `test` folder, if it was desired to be able to load both formats
 with the NodeJS ES Module resolver, the approach that could be taken would be
 to have two package.json files - one at the base of the package with a
-package.json containing a `module` property, and another in the `test` folder
-itself, without any `module` property. The `test` folder package.json would
+package.json containing a `"esm": true` property, and another in the `test` folder
+itself, without any `"esm"` property. The `test` folder package.json would
 then take precedence for that subfolder, allowing a partial adoption path.
 
-While this approach is by no means elegant, it falls out as a side effect of
-the package detection, and provides an adequate workaround for the transition
-phase.
+This provides an adequate workaround for the transition phase.
 
-## 4.5 Packages without any Main
-
-For packages without any main entry point that expect submodule requires, a
-boolean `"module": true` variation could be supported in the package.json so
-that `pkg/x`-style imports can still loaded as ES modules.
-
-## 4.6 Caching
+## 4.5 Caching
 
 For performance the package.json contents are cached for the duration of
 execution (including caching the absence of a package.json file), just like
 modules get cached in the module registry for the duration of execution. This
 caching behaviour is described in the draft specification here.
 
-## 4.7 Enabling wasm
+## 4.6 Further module formats in future
 
-For future support of Web Assembly, this spec also reserves the file extension
-`.wasm` as throwing an error when attempting to load modules with this
-extension, in order to allow Web Assembly loading to work by default in future.
+This is only needed for ES modules and not for other module formats because
+new additions to the runtime such as WebAssembly or binary ast files
+would be detected through their extensions (`.wasm` or `.bast` say).
+
+This problem of not knowing how to interpret a `.js` file is unique to the
+upgrade path of moving towards ES modules by default. Hence an `"esm"`
+package.json property specifically for this purpose is in line with precedent
+for an upgrade path of this nature.
 
 # 5. Draft Specification
 
@@ -212,16 +149,11 @@ any error on abrupt completion.
 error on abrupt completion.
 
 > **RESOLVE_MODULE_PATH(requestPath: String): Module**
-> 1. Let _{ main, module, packagePath }_ be the destructured object values of
+> 1. Let _{ main, esm, packagePath }_ be the destructured object values of
 the result of _GET_PACKAGE_CONFIG(requestPath)_, propagating any errors on
 abrupt completion.
-> 1. Let _loadAsModule_ be equal to _false_.
-> 1. If _module_ is equal to _true_ then,
->    1. Set _main_ to _undefined_.
->    1. Set _loadAsModule_ to _true_.
-> 1. If _module_ is a string then,
->    1. Set _main_ to _module_.
->    1. Set _loadAsModule_ to _true_.
+> 1. If _esm_ is not defined then,
+>    1. Set _esm_ to _false_.
 > 1. If _main_ is not _undefined_ and _packagePath_ is not _undefined_ and is
 equal to the path of _requestPath_ (ignoring trailing path separators) then,
 >    1. Set _requestPath_ to the path resolution of _main_ to _packagePath_.
@@ -238,7 +170,7 @@ ECMAScript module.
 binary.
 >    1. If _resolvedPath_ ends with _".wasm"_ then,
 >       1. Throw _Invalid Module Name_.
->    1. If _loadAsModule_ is set to _true_ then,
+>    1. If _esm_ is set to _true_ then,
 >       1. Return the resolved module at _resolvedPath_, loaded as an
 ECMAScript module.
 >    1. Otherwise,
@@ -263,19 +195,19 @@ then,
 "${packagePath}/package.json", throwing an error for _Invalid JSON_.
 >       1. Let _main_ be the value of _json.main_.
 >       1. If _main_ is defined and not a string, throw _Invalid Config_.
->       1. Let _module_ be the value of _json.module_.
->       1. If _module_ is defined and not a string or boolean, throw _Invalid
+>       1. Let _esm_ be the value of _json.esm_.
+>       1. If _esm_ is defined and not a  boolean, throw _Invalid
 Config_.
 >       1. Let _result_ be the object with keys for the values of _{ main,
-module, packagePath }_.
+esm, packagePath }_.
 >       1. Set in the package config cache the value for _packagePath_ as
 _result_.
 >       1. Return _result_.
 >    1. Otherwise,
 >       1. Set in the package config cache the value for _packagePath_ as an
 empty configuration entry.
-> 1. Return the empty configuration object _{ main: undefined, module:
-undefined, packagePath: undefined }_.
+> 1. Return the empty configuration object _{ main: undefined, esm: undefined,
+packagePath: undefined }_.
 
 > **RESOLVE_FILE(filePath: String): String**
 > 1. If _filePath_ is a file, return the real path of _filePath_.
