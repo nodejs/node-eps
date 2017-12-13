@@ -107,8 +107,7 @@ AsyncWorker support methods:
 # C++ Wrapper API
 
 The current view is that the API exported by the Node.js binary
-must be in C in order to achieve ABI stability. This [document]
-(http://www.oracle.com/technetwork/articles/servers-storage-dev/stablecplusplusabi-333927.html)
+must be in C in order to achieve ABI stability. This [document](http://www.oracle.com/technetwork/articles/servers-storage-dev/stablecplusplusabi-333927.html)
 outlines some of the challenges with respect to C++ and
 ABI stability.
 
